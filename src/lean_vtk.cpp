@@ -84,7 +84,7 @@ namespace polyfem
         os << "</VTKFile>\n";
     }
 
-    void VTUWriter::write_points(const int num_points, const vector<double>& points, std::ostream &os)
+    void VTUWriter::write_points(const int num_points, const vector<double>& points, std::ostream &os, bool is_volume_mesh)
     {
         os << "<Points>\n";
         os << "<DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n";
@@ -106,7 +106,7 @@ namespace polyfem
                 }
             }
 
-            if(!is_volume_)
+            if(!is_volume_mesh && dim==2)
                 os << " 0";
 
             os << "\n";
@@ -116,7 +116,7 @@ namespace polyfem
         os << "</Points>\n";
     }
 
-    void VTUWriter::write_cells(const int n_vertices, const vector<int>& tets, std::ostream &os)
+    void VTUWriter::write_cells(const int n_vertices, const vector<int>& tets, std::ostream &os, bool is_volume_mesh)
     {
         //const int n_cells = tets.rows();
         const int n_cells = tets.size()/n_vertices;
@@ -144,7 +144,7 @@ namespace polyfem
         os << "</DataArray>\n";
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         int min_tag, max_tag;
-        if (!is_volume_) {
+        if (!is_volume_mesh) {
             min_tag = VTKTagPlanar(n_vertices);
             max_tag = VTKTagPlanar(n_vertices);
         } else
@@ -156,7 +156,7 @@ namespace polyfem
         os << "<DataArray type=\"Int8\" Name=\"types\" format=\"ascii\" RangeMin=\"" << min_tag << "\" RangeMax=\"" << max_tag << "\">\n";
         for (int i = 0; i < n_cells; ++i)
         {
-            if (is_volume_)
+            if (is_volume_mesh)
                 os << VTKTagVolume(n_vertices) << "\n";
             else
                 os << VTKTagPlanar(n_vertices) << "\n";
@@ -226,7 +226,37 @@ namespace polyfem
         current_vector_point_data_ = name;
     }
 
-    bool VTUWriter::write_tet_mesh(const std::string &path, const int dim, const int cell_size,
+    bool VTUWriter::write_surface_mesh(const std::string &path, const int dim, const int cell_size,
+            const vector<double>& points, const vector<int>& tets)
+    {
+      assert(dim > 1);
+      assert(cell_size > 2);
+
+      std::ofstream os;
+      os.open(path.c_str());
+      if (!os.good()) {
+        os.close();
+        return false;
+      }
+        //const static int DIM = 3;
+        int num_points = points.size()/dim;
+        int num_cells = tets.size()/cell_size;
+        cout << "num_points: " << num_points << endl;
+        cout << "num_cells: " << num_cells << endl;
+        //is_volume_ = points.cols() == 3;
+        //is_volume_ = dim == 3;
+
+        write_header(num_points, num_cells, os);
+        write_points(num_points, points, os, false);
+        write_point_data(os);
+        write_cells(cell_size, tets, os, false);
+
+        write_footer(os);
+        os.close();
+        clear();
+        return true;
+    }
+    bool VTUWriter::write_volume_mesh(const std::string &path, const int dim, const int cell_size,
             const vector<double>& points, const vector<int>& tets)
     {
       assert(dim > 1);
@@ -247,9 +277,9 @@ namespace polyfem
         is_volume_ = dim == 3;
 
         write_header(num_points, num_cells, os);
-        write_points(num_points, points, os);
+        write_points(num_points, points, os, true);
         write_point_data(os);
-        write_cells(cell_size, tets, os);
+        write_cells(cell_size, tets, os, true);
 
         write_footer(os);
         os.close();

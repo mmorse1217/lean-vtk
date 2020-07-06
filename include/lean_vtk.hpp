@@ -95,7 +95,9 @@ class VTUWriter {
 public:
   /*bool write_tet_mesh(const std::string &path, const std::vector<double>& points,
                       const std::vector<int>& tets);*/
-    bool write_tet_mesh(const std::string &path, const int dim, const int cell_size,
+    bool write_surface_mesh(const std::string &path, const int dim, const int cell_size,
+        const std::vector<double>& points, const std::vector<int>& tets);
+    bool write_volume_mesh(const std::string &path, const int dim, const int cell_size,
         const std::vector<double>& points, const std::vector<int>& tets);
 
   void add_field(const std::string &name, const std::vector<double>& data, const int& dimension);
@@ -116,10 +118,10 @@ private:
   void write_header(const int n_vertices, const int n_elements,
                     std::ostream &os);
   void write_footer(std::ostream &os);
-  void write_points(const int num_points, const std::vector<double>& points, std::ostream &os);
+  void write_points(const int num_points, const std::vector<double>& points, std::ostream &os, bool is_volume_mesh=true);
 
   //void write_cells(const std::vector<int>& tets, std::ostream &os);
-    void write_cells(const int n_vertices, const std::vector<int>& tets, std::ostream &os);
+    void write_cells(const int n_vertices, const std::vector<int>& tets, std::ostream &os, bool is_volume_mesh=true);
 };
 template<unsigned int N>
 int index(int i, int j){
