@@ -8,78 +8,307 @@
 using std::cout;
 using std::endl;
 using std::vector;
+using  leanvtk::VTUWriter;
+typedef double real_t;
+TEST_CASE("Single elements", "[single]"){
+    vector<real_t> points;
+    vector<int> elements;
+    vector<real_t> scalar_field;
+    vector<real_t> vector_field;
+    int dim;
+    int cell_size;
+    std::string filename;
+    bool is_volume_mesh = false;
+    SECTION("Triangle 2D"){
+        points = {
+             1.,  1.,
+             1., -1.,
+            -1., -1.
+        };
+        elements = {
+            0, 1, 2
+        };
+        VTUWriter writer;
 
-TEST_CASE("Test single flat tri", "[single][tri]"){
-    vector<double> points = {
-         1.,  1., -1.,
-         1., -1., 1.,
-        -1., -1., 0.
-    };
-    vector<int> tris = {
-        0,
-        1,
-        2
-    };
-    polyfem::VTUWriter writer;
+        dim = 2;
+        cell_size = 3;
+        scalar_field = {
+            0., 1., 2.
+        };
+        vector_field = points;
+        filename = "single_tri_2D.vtu";
+    }
+    SECTION("Quad 2D"){
+        points = {
+             1.,  1., 
+             1., -1., 
+            -1., -1., 
+            -1.,  1. 
+        };
+        elements = {
+            0, 1, 2, 3
+        };
 
-    const int dim = 3;
-    const int cell_size = 3;
-    writer.write_surface_mesh("test_tri.vtu", dim, cell_size, points, tris);
+        scalar_field = {
+            0., 1., 2., 3.
+        };
+        vector_field = points;
+
+        dim = 2;
+        cell_size = 4;
+        filename = "single_quad_2D.vtu";
+    }
+    SECTION("Triangle 3D"){
+        points = {
+             1.,  1., -1.,
+             1., -1., 1.,
+            -1., -1., 0.
+        };
+        elements = {
+            0, 1, 2
+        };
+        VTUWriter writer;
+
+        dim = 3;
+        cell_size = 3;
+        scalar_field = {
+            0., 1., 2.
+        };
+        vector_field = points;;
+        filename = "single_tri.vtu";
+    }
+    SECTION("Quad 3D"){
+        points = {
+             1.,  1., 1.,
+             1., -1., 0.,
+            -1., -1., 0.,
+            -1.,  1., -1.
+        };
+        elements = {
+            0,  1,2,  3
+        };
+
+        scalar_field = {
+            0., 1., 2., 3.
+        };
+        vector_field = points;
+
+        dim = 3;
+        cell_size = 4;
+        filename = "single_quad.vtu";
+    }
+    SECTION("Hex element"){
+        points = {
+             1.,  1., 1.,
+             1., -1., 1.,
+            -1., -1., 1.,
+            -1.,  1., 1.,
+             1.,  1.,-1.,
+             1., -1.,-1.,
+            -1., -1.,-1.,
+            -1.,  1.,-1.
+        };
+        elements= {0, 1, 2, 3, 4, 5, 6, 7};
+        
+        scalar_field = { 0., 1., 2., 3., 4., 5., 6., 7.  };
+        vector_field = points;;
+
+        dim = 3;
+        cell_size = 8;
+        filename = "single_hex.vtu";
+        is_volume_mesh = true;
+    }
+
+    SECTION("Tet element"){
+        points = {
+             0.,  1., 0.,
+             1.,  0., 0.,
+             0.,  0., 0.,
+             0.,  0., 1.
+        };
+        elements = { 0, 1, 2, 3, };
+        
+        scalar_field = { 0., 1., 2., 3.  };
+
+        vector_field = points;
+
+        dim = 3;
+        cell_size = 4;
+        filename = "single_tet.vtu";
+        is_volume_mesh = true;
+    }
+    VTUWriter writer;
+
+    writer.add_scalar_field("scalar_field", scalar_field);
+    writer.add_vector_field("vector_field", vector_field, dim);
+
+    if (is_volume_mesh) {
+        writer.write_volume_mesh(filename, dim, cell_size, points, elements);
+    } else {
+        writer.write_surface_mesh(filename, dim, cell_size, points, elements);
+    }
+    
 }
-TEST_CASE("Test single flat quad", "[single][quad]"){
-    vector<double> points = {
-         1.,  1., 1.,
-         1., -1., 0.,
-        -1., -1., 0.,
-        -1.,  1., -1.
-    };
-    vector<int> quads = {
-        0,  1,2,  3
-    };
-    polyfem::VTUWriter writer;
 
-    const int dim = 3;
-    const int cell_size = 4;
-    writer.write_surface_mesh("test_quad.vtu", dim , cell_size, points, quads);
+TEST_CASE("Multiple elements", "[mesh]"){
+    vector<real_t> points;
+    vector<int> elements;
+    vector<real_t> scalar_field;
+    vector<real_t> vector_field;
+    int dim;
+    int cell_size;
+    std::string filename;
+    bool is_volume_mesh = false;
+    SECTION("Two triangle 2D"){
+        points = {
+            0., 0.,
+            0., 1., 
+            1., 0.,
+            1., 1.
+        };
+        elements = {
+            0, 1, 2,
+            1, 3, 2 
+        };
+        VTUWriter writer;
 
-}
+        dim = 2;
+        cell_size = 3;
+        scalar_field = {
+            0., 1., 2., 3.
+        };
+        vector_field = points;
+        filename = "mesh_tri_2D.vtu";
+    }
+    SECTION("Two quad 2D"){
+        points = {
+             1.,  1., 
+             1., -1., 
+            -1., -1., 
+            -1.,  1.,
+            3., 1.,
+            3., -1.
+        };
+        elements = {
+            0, 1, 2, 3,
+            0, 4, 5, 1
+        };
 
+        scalar_field = {
+            0., 1., 2., 3., 4., 5.
+        };
+        vector_field = points;
 
-TEST_CASE("Test single flat hex", "[single][hex]"){
-    vector<double> points = {
-         1.,  1., 1.,
-         1., -1., 1.,
-        -1., -1., 1.,
-        -1.,  1., 1.,
-         1.,  1.,-1.,
-         1., -1.,-1.,
-        -1., -1.,-1.,
-        -1.,  1.,-1.
-    };
-    vector<int> hexes = {0, 1, 2, 3, 4, 5, 6, 7};
-    polyfem::VTUWriter writer;
+        dim = 2;
+        cell_size = 4;
+        filename = "mesh_quad_2D.vtu";
+    }
+    SECTION("Two triangles 3D"){
+        points = {
+             1.,  1., -1.,
+             1., -1., 1.,
+            -1., -1., 0.,
+            2., 1., 1.
+        };
+        elements = {
+            0, 1, 2,
+            1, 3, 2 
+        };
+        VTUWriter writer;
 
-    const int dim = 3;
-    const int cell_size = 8;
-    writer.write_volume_mesh("test_hex.vtu", dim, cell_size, points, hexes);
-}
+        dim = 3;
+        cell_size = 3;
+        scalar_field = {
+            0., 1., 2., 3. 
+        };
+        vector_field = points;;
+        filename = "mesh_tri.vtu";
+    }
+    SECTION("Two quads 3D"){
+        points = {
+             1.,  1., 1.,
+             1., -1., 0.,
+            -1., -1., 0.,
+            -1.,  1., -1.,
+             3., 1., 2.,
+             3., -1., 2.
+        };
+        elements = {
+            0, 1, 2, 3,
+            0, 4, 5, 1
+        };
 
-TEST_CASE("Test single flat tetrahedron", "[single][tet]"){
-    vector<double> points = {
-         0.,  1., 0.,
-         1.,  0., 0.,
-         0.,  0., 0.,
-         0.,  0., 1.
-    };
-    vector<int> tets = {
-        0,
-        1,
-        2,
-        3,
-    };
-    polyfem::VTUWriter writer;
+        scalar_field = {
+            0., 1., 2., 3., 4., 5.
+        };
+        vector_field = points;
 
-    const int dim = 3;
-    const int cell_size = 4;
-    writer.write_volume_mesh("test_tet.vtu", dim, cell_size, points, tets);
+        dim = 3;
+        cell_size = 4;
+        filename = "mesh_quad.vtu";
+    }
+    SECTION("Two hex elements"){
+        points = {
+             1.,  1., 1.,
+             1., -1., 1.,
+            -1., -1., 1.,
+            -1.,  1., 1.,
+             1.,  1.,-1.,
+             1., -1.,-1.,
+            -1., -1.,-1.,
+            -1.,  1.,-1.,
+             1.,  1., 3.,
+             1., -1., 3.,
+            -1., -1., 3.,
+            -1.,  1., 3.,
+
+        };
+        elements= {
+            0, 1, 2, 3, 4, 5, 6, 7,
+            8, 9, 10, 11,0, 1, 2, 3,
+        };
+        
+        scalar_field = { 0., 1., 2., 3., 4., 5., 6., 7., 8.,9., 10., 11. };
+        vector_field = points;
+
+        dim = 3;
+        cell_size = 8;
+        filename = "mesh_hex.vtu";
+        is_volume_mesh = true;
+    }
+
+    SECTION(" Two tet element"){
+        points = {
+             0.,  1., 0.,
+             1.,  0., 0.,
+             0.,  0., 0.,
+             0.,  0., 1.,
+             1., 1., 1.
+
+        };
+        elements = { 
+            0, 1, 2, 3, 
+            0, 1, 3, 4
+        };
+        
+        scalar_field = { 0., 1., 2., 3.,4  };
+
+        vector_field = points;
+
+        dim = 3;
+        cell_size = 4;
+        filename = "mesh_tet.vtu";
+        is_volume_mesh = true;
+    }
+    VTUWriter writer;
+
+    writer.add_scalar_field("scalar_field", scalar_field);
+    
+    writer.add_vector_field("vector_field", vector_field, dim);
+    if (is_volume_mesh) {
+        writer.write_volume_mesh(filename, dim, cell_size, points, elements);
+    } else {
+        writer.write_surface_mesh(filename, dim, cell_size, points, elements);
+    }
+    
 }

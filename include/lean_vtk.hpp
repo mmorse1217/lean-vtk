@@ -1,22 +1,19 @@
 
-#include <string>
-#include <cassert>
-
 #ifndef VTU_WRITER_HPP
 #define VTU_WRITER_HPP
 
-//#include <Eigen/Dense>
+#include <string>
+#include <cassert>
 
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 
-namespace polyfem {
-namespace {
-int index(int N, int i, int j){
-    assert(N > 0);
-    return i*N+j;
+namespace leanvtk {
+inline int index(int N, int i, int j) {
+  assert(N > 0);
+  return i * N + j;
 }
 template <typename T> class VTKDataNode {
 
@@ -24,16 +21,15 @@ public:
   VTKDataNode() {}
 
   VTKDataNode(const std::string &name, const std::string &numeric_type,
-              //const Eigen::MatrixXd &data = Eigen::MatrixXd(),
-                const std::vector<double>& data = std::vector<double>(),
+              const std::vector<double> &data = std::vector<double>(),
               const int n_components = 1)
       : name_(name), numeric_type_(numeric_type), data_(data),
         n_components_(n_components) {}
 
-  inline std::vector<double>& data() { return data_; }
+  inline std::vector<double> &data() { return data_; }
 
   void initialize(const std::string &name, const std::string &numeric_type,
-                  const std::vector<double>& data, const int n_components = 1) {
+                  const std::vector<double> &data, const int n_components = 1) {
     name_ = name;
     numeric_type_ = numeric_type;
     data_ = data;
@@ -41,41 +37,35 @@ public:
   }
 
   void write(std::ostream &os) const {
+    // NOTE this writer implicitly assumes that 2D vectors will live in 2D
+    // space. To decouple this, vtk_num_components must match n_components_
+    // and the conditional if(n_components_==2){...} must be corrected for the
+    // context.
+    int vtk_num_components = n_components_ == 2 ? n_components_ + 1 : n_components_;
     os << "<DataArray type=\"" << numeric_type_ << "\" Name=\"" << name_
-       << "\" NumberOfComponents=\"" << n_components_
+       << "\" NumberOfComponents=\"" << vtk_num_components
        << "\" format=\"ascii\">\n";
-    //if (data_.cols() != 1) { // TODO FIXME add analogue for columns here
     if (n_components_ != 1) {
       std::cerr << "writing matrix in vtu file (check ordering of values)"
                 << std::endl;
     }
-    //os << data_;
 
-        const int num_points = data_.size();
-        const int stride = num_points/n_components_;
-        assert(double(stride) == double(num_points)/double(n_components_));
+    const int num_points = data_.size() / n_components_;
 
-        //for (int d = 0; d < points.rows(); ++d)
-        for (int d = 0; d < num_points; ++d)
-        {
-            //for (int i = 0; i < points.cols(); ++i)
-            for (int i = 0; i < stride; ++i)
-            {
-                //os << points(d, i);
-                int idx = index(stride, d, i); // TODO fix
-                os << data_.at(idx);
-                if (i < stride- 1)
-                {
-                    os << " ";
-                }
-            }
-
-            //if(!is_volume_)
-            //    os << " 0";
-
-            os << "\n";
+    for (int d = 0; d < num_points; ++d) {
+      for (int i = 0; i < n_components_; ++i) {
+        int idx = index(n_components_, d, i); 
+        os << data_.at(idx);
+        if (i < n_components_ - 1) {
+          os << " ";
         }
+      }
 
+      if(n_components_==2)
+         os << " 0";
+
+      os << "\n";
+    }
 
     os << "</DataArray>\n";
   }
@@ -84,54 +74,135 @@ public:
 
 private:
   std::string name_;
-  /// Float64/
+  
   std::string numeric_type_;
   std::vector<double> data_;
   int n_components_;
 };
-} // namespace
 
 class VTUWriter {
 public:
-  /*bool write_tet_mesh(const std::string &path, const std::vector<double>& points,
-                      const std::vector<int>& tets);*/
-    bool write_surface_mesh(const std::string &path, const int dim, const int cell_size,
-        const std::vector<double>& points, const std::vector<int>& tets);
-    bool write_volume_mesh(const std::string &path, const int dim, const int cell_size,
-        const std::vector<double>& points, const std::vector<int>& tets);
+  /**
+   * Write surface mesh to a file
+   * const string& path             filename to store vtk mesh (ending with .vtu)
+   * const int dim                  ambient dimension (2D or 3D)
+   * const int cell_size            number of vertices per cell 
+   *                                (3 for triangles, 4 for quads and tets, 8
+   *                                for hexes)
+   * const vector<double>& points   list of point locations. Format  of the
+   *                                vector is:
+   *                                  [x_1, y_1, x_2, y_2, ..., x_n, y_n]
+   *                                for 2D and 
+   *                                  [x_1, y_1, z_1, ..., x_n, y_n, z_n]
+   *                                for 3D.
+   * const vector<int >& elements   list of point indices per cell. Format  of the
+   *                                vector is:
+   *                                  [c_{1,1}, c_{1,2},..., c_{1, cell_size}, 
+   *                                  ...  
+   *                                  c_{cell_size,1}, c_{cell_size,2},..., c_{cell_size, cell_size}]
+   *                                  (i.e. index c*i corresponds to the ith
+   *                                  vertex in the cth cell in the mesh
+   */
+  bool write_surface_mesh(const std::string &path,
+                          const int dim,
+                          const int cell_size,
+                          const std::vector<double> &points,
+                          const std::vector<int> &elements);
+  /**
+   * Write volume mesh to a file
+   *
+   * const string& path             filename to store vtk mesh (ending with .vtu)
+   * const int dim                  ambient dimension (2D or 3D)
+   * const int cell_size            number of vertices per cell 
+   *                                (3 for triangles, 4 for quads and tets, 8
+   *                                for hexes)
+   * const vector<double>& points   list of point locations. If there are 
+   *                                n points in the mesh, the format  of the
+   *                                vector is:
+   *                                  [x_1, y_1, x_2, y_2, ..., x_n, y_n]
+   *                                for 2D and 
+   *                                  [x_1, y_1, z_1, ..., x_n, y_n, z_n]
+   *                                for 3D.
+   * const vector<int >& elements   list of point indices per cell. Format  of the
+   *                                vector is:
+   *                                  [c_{1,1}, c_{1,2},..., c_{1, cell_size}, 
+   *                                  ...  
+   *                                  c_{m,1}, c_{m,2},..., c_{m, cell_size}]
+   *                                if there are m cells
+   *                                (i.e. index c*i corresponds to the ith
+   *                                vertex in the cth cell in the mesh
+   */
+  bool write_volume_mesh(const std::string &path, 
+                         const int dim,
+                         const int cell_size, 
+                         const std::vector<double> &points,
+                         const std::vector<int> &elements);
+  /**
+   * Add a general field to the mesh
+   * const string& name             name of the field to store vtk mesh 
+   * const vector<double>& data     list of field values. There must be dimension 
+   *                                values for each point in the mesh to be written.
+   *                                Format of the vector is 
+   *                                  [f_{1,1}, f_{1,2},..., f_{1, dimension}, 
+   *                                  ...  
+   *                                  f_{n,1}, f_{n,2},..., f_{n, dimension}]
+   *                                if there are n points in the mesh
+   * const int dimension            ambient dimension (2D or 3D)
+   */
+  void add_field(const std::string &name, 
+                 const std::vector<double> &data,
+                 const int &dimension);
 
-  void add_field(const std::string &name, const std::vector<double>& data, const int& dimension);
-  void add_scalar_field(const std::string &name, const std::vector<double>& data);
-  void add_vector_field(const std::string &name, const std::vector<double>& data, const int& dimension);
+  /**
+   * Add a scalar field to the mesh
+   * const string& name             name of the field to store vtk mesh 
+   * const vector<double>& data     list of field values. There must be one 
+   *                                value for each point in the mesh to be written.
+   *                                Format of the vector is 
+   *                                  [f_1, f_2,..., f_n]
+   *                                if there are n points in the mesh
+   */
+  void add_scalar_field(const std::string &name,
+                        const std::vector<double> &data);
 
+  /**
+   * Add a vector field to the mesh
+   * const string& name             name of the field to store vtk mesh 
+   * const vector<double>& data     list of field values. There must be dimension 
+   *                                values for each point in the mesh to be written.
+   *                                Format of the vector is 
+   *                                  [f_{1,1}, f_{1,2},..., f_{1, dimension}, 
+   *                                  ...  
+   *                                  f_{n,1}, f_{n,2},..., f_{n, dimension}]
+   *                                if there are n points in the mesh
+   * const int dimension            ambient dimension (2D or 3D)
+   */
+  void add_vector_field(const std::string &name,
+                        const std::vector<double> &data, 
+                        const int &dimension);
+  // Remove all fields and initialized data from the writer.
   void clear();
 
 private:
-  bool is_volume_;
-
   std::vector<VTKDataNode<double>> point_data_;
   std::vector<VTKDataNode<double>> cell_data_;
   std::string current_scalar_point_data_;
   std::string current_vector_point_data_;
-
+  
   void write_point_data(std::ostream &os);
+
   void write_header(const int n_vertices, const int n_elements,
                     std::ostream &os);
-  void write_footer(std::ostream &os);
-  void write_points(const int num_points, const std::vector<double>& points, std::ostream &os, bool is_volume_mesh=true);
 
-  //void write_cells(const std::vector<int>& tets, std::ostream &os);
-    void write_cells(const int n_vertices, const std::vector<int>& tets, std::ostream &os, bool is_volume_mesh=true);
+  void write_footer(std::ostream &os);
+
+  void write_points(const int num_points, const std::vector<double> &points,
+                    std::ostream &os, bool is_volume_mesh = true);
+
+  void write_cells(const int n_vertices, const std::vector<int> &tets,
+                   std::ostream &os, bool is_volume_mesh = true);
 };
-template<unsigned int N>
-int index(int i, int j){
-    return i*N+j;
-}
-} // namespace polyfem
+} // namespace leanvtk
 
 #endif // VTU_WRITER_HPP
 
-/*template <class T>
-T add(T a, T b){
-    return a + b;
-}*/
