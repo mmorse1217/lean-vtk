@@ -211,6 +211,20 @@ bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
     os.close();
     return false;
   }
+
+  write_surface_mesh(os, dim, cell_size, points, tets);
+
+  os.close();
+  return true;
+}
+
+bool VTUWriter::write_surface_mesh(std::ostream &os, const int dim,
+                                   const int cell_size,
+                                   const vector<double> &points,
+                                   const vector<int> &tets) {
+  assert(dim > 1);
+  assert(cell_size > 2);
+
   int num_points = points.size() / dim;
   int num_cells = tets.size() / cell_size;
 
@@ -220,10 +234,10 @@ bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
   write_cells(cell_size, tets, os, false);
 
   write_footer(os);
-  os.close();
   clear();
   return true;
 }
+
 bool VTUWriter::write_volume_mesh(const std::string &path, const int dim,
                                   const int cell_size,
                                   const vector<double> &points,
@@ -237,6 +251,20 @@ bool VTUWriter::write_volume_mesh(const std::string &path, const int dim,
     os.close();
     return false;
   }
+
+  write_volume_mesh(os, dim, cell_size, points, tets);
+
+  os.close();
+  return true;
+}
+
+bool VTUWriter::write_volume_mesh(std::ostream &os, const int dim,
+                                  const int cell_size,
+                                  const vector<double> &points,
+                                  const vector<int> &tets) {
+  assert(dim > 1);
+  assert(cell_size > 2);
+
   int num_points = points.size() / dim;
   int num_cells = tets.size() / cell_size;
 
@@ -246,7 +274,6 @@ bool VTUWriter::write_volume_mesh(const std::string &path, const int dim,
   write_cells(cell_size, tets, os, true);
 
   write_footer(os);
-  os.close();
   clear();
   return true;
 }
