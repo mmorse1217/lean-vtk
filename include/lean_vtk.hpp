@@ -212,15 +212,43 @@ public:
                  const int &dimension);
 
   /**
+   * Add a general cell/element field to the mesh
+   * const string& name             name of the field to store vtk mesh
+   * const vector<double>& data     list of field values. There must be dimension
+   *                                values for each cell in the mesh to be written.
+   *                                Format of the vector is
+   *                                  [f_{1,1}, f_{1,2},..., f_{1, dimension},
+   *                                  ...
+   *                                  f_{m,1}, f_{m,2},..., f_{m, dimension}]
+   *                                if there are m cells in the mesh
+   * const int dimension            ambient dimension (2D or 3D)
+   */
+  void add_cell_field(const std::string &name,
+                 const std::vector<double> &data,
+                 const int &dimension);
+
+  /**
    * Add a scalar field to the mesh
-   * const string& name             name of the field to store vtk mesh 
-   * const vector<double>& data     list of field values. There must be one 
+   * const string& name             name of the field to store vtk mesh
+   * const vector<double>& data     list of field values. There must be one
    *                                value for each point in the mesh to be written.
-   *                                Format of the vector is 
+   *                                Format of the vector is
    *                                  [f_1, f_2,..., f_n]
    *                                if there are n points in the mesh
    */
   void add_scalar_field(const std::string &name,
+                        const std::vector<double> &data);
+
+  /**
+   * Add a scalar field to cells/elements of the mesh
+   * const string& name             name of the field to store vtk mesh
+   * const vector<double>& data     list of field values. There must be one
+   *                                value for each cell in the mesh to be written.
+   *                                Format of the vector is
+   *                                  [f_1, f_2,..., f_m]
+   *                                if there are m cells in the mesh
+   */
+  void add_cell_scalar_field(const std::string &name,
                         const std::vector<double> &data);
 
   /**
@@ -238,6 +266,23 @@ public:
   void add_vector_field(const std::string &name,
                         const std::vector<double> &data, 
                         const int &dimension);
+
+  /**
+   * Add a vector field to cells/elements of the mesh
+   * const string& name             name of the field to store vtk mesh
+   * const vector<double>& data     list of field values. There must be dimension
+   *                                values for each cell in the mesh to be written.
+   *                                Format of the vector is
+   *                                  [f_{1,1}, f_{1,2},..., f_{1, dimension},
+   *                                  ...
+   *                                  f_{m,1}, f_{m,2},..., f_{m, dimension}]
+   *                                if there are m cells in the mesh
+   * const int dimension            ambient dimension (2D or 3D)
+   */
+  void add_cell_vector_field(const std::string &name,
+                        const std::vector<double> &data,
+                        const int &dimension);
+
   // Remove all fields and initialized data from the writer.
   void clear();
 
@@ -246,8 +291,13 @@ private:
   std::vector<VTKDataNode<double>> cell_data_;
   std::string current_scalar_point_data_;
   std::string current_vector_point_data_;
+  std::string current_scalar_cell_data_;
+  std::string current_vector_cell_data_;
+
   
   void write_point_data(std::ostream &os);
+
+  void write_cell_data(std::ostream &os);
 
   void write_header(const int n_vertices, const int n_elements,
                     std::ostream &os);

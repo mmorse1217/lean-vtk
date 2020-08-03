@@ -15,6 +15,8 @@ TEST_CASE("Single elements", "[single]"){
     vector<int> elements;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
+    vector<real_t> cell_scalar_field;
+    vector<real_t> cell_vector_field;
     int dim;
     int cell_size;
     std::string filename;
@@ -36,6 +38,9 @@ TEST_CASE("Single elements", "[single]"){
             0., 1., 2.
         };
         vector_field = points;
+        cell_scalar_field = {1.};
+        cell_vector_field = {1., 1.};
+
         filename = "single_tri_2D.vtu";
     }
     SECTION("Quad 2D"){
@@ -53,6 +58,9 @@ TEST_CASE("Single elements", "[single]"){
             0., 1., 2., 3.
         };
         vector_field = points;
+
+        cell_scalar_field = {1.};
+        cell_vector_field = {1., 1.};
 
         dim = 2;
         cell_size = 4;
@@ -75,6 +83,9 @@ TEST_CASE("Single elements", "[single]"){
             0., 1., 2.
         };
         vector_field = points;;
+        cell_scalar_field = {1.};
+        cell_vector_field = {1., 1., 1.};
+
         filename = "single_tri.vtu";
     }
     SECTION("Quad 3D"){
@@ -92,6 +103,9 @@ TEST_CASE("Single elements", "[single]"){
             0., 1., 2., 3.
         };
         vector_field = points;
+
+        cell_scalar_field = {1.};
+        cell_vector_field = {1., 1., 1.};
 
         dim = 3;
         cell_size = 4;
@@ -113,6 +127,9 @@ TEST_CASE("Single elements", "[single]"){
         scalar_field = { 0., 1., 2., 3., 4., 5., 6., 7.  };
         vector_field = points;;
 
+        cell_scalar_field = {1.};
+        cell_vector_field = {1., 1., 1.};
+
         dim = 3;
         cell_size = 8;
         filename = "single_hex.vtu";
@@ -129,8 +146,10 @@ TEST_CASE("Single elements", "[single]"){
         elements = { 0, 1, 2, 3, };
         
         scalar_field = { 0., 1., 2., 3.  };
-
         vector_field = points;
+
+        cell_scalar_field = {1.};
+        cell_vector_field = {1., 1., 1.};
 
         dim = 3;
         cell_size = 4;
@@ -141,6 +160,9 @@ TEST_CASE("Single elements", "[single]"){
 
     writer.add_scalar_field("scalar_field", scalar_field);
     writer.add_vector_field("vector_field", vector_field, dim);
+
+    writer.add_cell_scalar_field("cell_scalar_field", cell_scalar_field);
+    writer.add_cell_vector_field("cell_vector_field", cell_vector_field, dim);
 
     if (is_volume_mesh) {
         writer.write_volume_mesh(filename, dim, cell_size, points, elements);
@@ -155,6 +177,8 @@ TEST_CASE("Multiple elements", "[mesh]"){
     vector<int> elements;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
+    vector<real_t> cell_scalar_field;
+    vector<real_t> cell_vector_field;
     int dim;
     int cell_size;
     std::string filename;
@@ -178,6 +202,9 @@ TEST_CASE("Multiple elements", "[mesh]"){
             0., 1., 2., 3.
         };
         vector_field = points;
+        cell_scalar_field = {1., 2.};
+        cell_vector_field = {1., 0.,
+                             0., 1.};
         filename = "mesh_tri_2D.vtu";
     }
     SECTION("Two quad 2D"){
@@ -198,6 +225,10 @@ TEST_CASE("Multiple elements", "[mesh]"){
             0., 1., 2., 3., 4., 5.
         };
         vector_field = points;
+
+        cell_scalar_field = {1., 2.};
+        cell_vector_field = {1., 0.,
+                             0., 1.};
 
         dim = 2;
         cell_size = 4;
@@ -221,7 +252,10 @@ TEST_CASE("Multiple elements", "[mesh]"){
         scalar_field = {
             0., 1., 2., 3. 
         };
-        vector_field = points;;
+        vector_field = points;
+        cell_scalar_field = {1., 2.};
+        cell_vector_field = {1., 0., 0.,
+                             0., 1., 0.};
         filename = "mesh_tri.vtu";
     }
     SECTION("Two quads 3D"){
@@ -242,6 +276,10 @@ TEST_CASE("Multiple elements", "[mesh]"){
             0., 1., 2., 3., 4., 5.
         };
         vector_field = points;
+
+        cell_scalar_field = {1., 2.};
+        cell_vector_field = {1., 0., 0.,
+                             0., 1., 0.};
 
         dim = 3;
         cell_size = 4;
@@ -271,6 +309,10 @@ TEST_CASE("Multiple elements", "[mesh]"){
         scalar_field = { 0., 1., 2., 3., 4., 5., 6., 7., 8.,9., 10., 11. };
         vector_field = points;
 
+        cell_scalar_field = {1., 2.};
+        cell_vector_field = {1., 0., 0.,
+                             0., 1., 0.};
+
         dim = 3;
         cell_size = 8;
         filename = "mesh_hex.vtu";
@@ -292,8 +334,10 @@ TEST_CASE("Multiple elements", "[mesh]"){
         };
         
         scalar_field = { 0., 1., 2., 3.,4  };
-
         vector_field = points;
+        cell_scalar_field = {1., 2.};
+        cell_vector_field = {1., 0., 0.,
+                             0., 1., 0.};
 
         dim = 3;
         cell_size = 4;
@@ -303,8 +347,9 @@ TEST_CASE("Multiple elements", "[mesh]"){
     VTUWriter writer;
 
     writer.add_scalar_field("scalar_field", scalar_field);
-    
     writer.add_vector_field("vector_field", vector_field, dim);
+    writer.add_cell_scalar_field("cell_scalar_field", cell_scalar_field);
+    writer.add_cell_vector_field("cell_vector_field", cell_vector_field, dim);
     if (is_volume_mesh) {
         writer.write_volume_mesh(filename, dim, cell_size, points, elements);
     } else {

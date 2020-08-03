@@ -67,6 +67,25 @@ void VTUWriter::write_point_data(std::ostream &os) {
   os << "</PointData>\n";
 }
 
+void VTUWriter::write_cell_data(std::ostream &os) {
+  if (current_scalar_cell_data_.empty() && current_vector_cell_data_.empty())
+    return;
+
+  os << "<CellData ";
+  if (!current_scalar_cell_data_.empty())
+    os << "Scalars=\"" << current_scalar_cell_data_ << "\" ";
+  if (!current_vector_cell_data_.empty())
+    os << "Vectors=\"" << current_vector_cell_data_ << "\" ";
+  os << ">\n";
+
+  for (auto it = cell_data_.begin(); it != cell_data_.end(); ++it) {
+    it->write(os);
+  }
+
+  os << "</CellData>\n";
+}
+
+
 void VTUWriter::write_header(const int n_vertices, const int n_elements,
                              std::ostream &os) {
   os << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\">\n";
@@ -182,11 +201,33 @@ void VTUWriter::add_field(const std::string &name, const vector<double> &data,
     add_vector_field(name, tmp, dimension);
 }
 
+void VTUWriter::add_cell_field(const std::string &name, const vector<double> &data,
+                          const int &dimension) {
+  using std::abs;
+
+  vector<double> tmp(data.size(), 0.);
+
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+
+  if (dimension == 1)
+    add_cell_scalar_field(name, tmp);
+  else
+    add_cell_vector_field(name, tmp, dimension);
+}
+
 void VTUWriter::add_scalar_field(const std::string &name,
                                  const vector<double> &data) {
   point_data_.push_back(VTKDataNode<double>());
   point_data_.back().initialize(name, "Float64", data);
   current_scalar_point_data_ = name;
+}
+
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                 const vector<double> &data) {
+  cell_data_.push_back(VTKDataNode<double>());
+  cell_data_.back().initialize(name, "Float64", data);
+  current_scalar_cell_data_ = name;
 }
 
 void VTUWriter::add_vector_field(const std::string &name,
@@ -196,6 +237,15 @@ void VTUWriter::add_vector_field(const std::string &name,
 
   point_data_.back().initialize(name, "Float64", data, dimension);
   current_vector_point_data_ = name;
+}
+
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<double> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(VTKDataNode<double>());
+
+  cell_data_.back().initialize(name, "Float64", data, dimension);
+  current_vector_cell_data_ = name;
 }
 
 bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
@@ -232,6 +282,7 @@ bool VTUWriter::write_surface_mesh(std::ostream &os, const int dim,
   write_points(num_points, points, os, false);
   write_point_data(os);
   write_cells(cell_size, tets, os, false);
+  write_cell_data(os);
 
   write_footer(os);
   clear();
@@ -272,6 +323,7 @@ bool VTUWriter::write_volume_mesh(std::ostream &os, const int dim,
   write_points(num_points, points, os, true);
   write_point_data(os);
   write_cells(cell_size, tets, os, true);
+  write_cell_data(os);
 
   write_footer(os);
   clear();
