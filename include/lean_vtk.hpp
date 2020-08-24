@@ -138,6 +138,32 @@ public:
                          const std::vector<double> &points,
                          const std::vector<int> &elements);
   /**
+   * Write point cloud to a file
+   *
+   * const string& path             filename to store vtk mesh (ending with .vtu)
+   * const int dim                  ambient dimension (2D or 3D)
+   * const int cell_size            number of vertices per cell 
+   *                                (3 for triangles, 4 for quads and tets, 8
+   *                                for hexes)
+   * const vector<double>& points   list of point locations. If there are 
+   *                                n points in the mesh, the format  of the
+   *                                vector is:
+   *                                  [x_1, y_1, x_2, y_2, ..., x_n, y_n]
+   *                                for 2D and 
+   *                                  [x_1, y_1, z_1, ..., x_n, y_n, z_n]
+   *                                for 3D.
+   * const vector<int >& elements   list of point indices per cell. Format  of the
+   *                                vector is:
+   *                                  [c_{1,1}, c_{1,2},..., c_{1, cell_size}, 
+   *                                  ...  
+   *                                  c_{m,1}, c_{m,2},..., c_{m, cell_size}]
+   *                                if there are m cells
+   *                                (i.e. index c*i corresponds to the ith
+   *                                vertex in the cth cell in the mesh
+   */
+  bool write_point_cloud(const std::string &path, const int dim,
+                                    const std::vector<double> &points); 
+  /**
    * Add a general field to the mesh
    * const string& name             name of the field to store vtk mesh 
    * const vector<double>& data     list of field values. There must be dimension 
@@ -196,12 +222,16 @@ private:
 
   void write_footer(std::ostream &os);
 
+  bool write_mesh(const std::string &path, const int dim, const int cell_size,
+                  const std::vector<double> &points, const std::vector<int> &tets, 
+                  bool is_volume_mesh=true);
+
   void write_points(const int num_points, const std::vector<double> &points,
                     std::ostream &os, bool is_volume_mesh = true);
 
   void write_cells(const int n_vertices, const std::vector<int> &tets,
                    std::ostream &os, bool is_volume_mesh = true);
-};
+  };
 } // namespace leanvtk
 
 #endif // VTU_WRITER_HPP

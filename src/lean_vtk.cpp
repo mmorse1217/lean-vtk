@@ -198,10 +198,9 @@ void VTUWriter::add_vector_field(const std::string &name,
   current_vector_point_data_ = name;
 }
 
-bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
-                                   const int cell_size,
-                                   const vector<double> &points,
-                                   const vector<int> &tets) {
+bool VTUWriter::write_mesh(const std::string &path, const int dim, const int cell_size,
+              const vector<double> &points, const vector<int> &tets, bool is_volume_mesh){
+
   assert(dim > 1);
   assert(cell_size > 2);
 
@@ -215,21 +214,33 @@ bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
   int num_cells = tets.size() / cell_size;
 
   write_header(num_points, num_cells, os);
-  write_points(num_points, points, os, false);
+  write_points(num_points, points, os, is_volume_mesh);
   write_point_data(os);
-  write_cells(cell_size, tets, os, false);
+  write_cells(cell_size, tets, os, is_volume_mesh);
 
   write_footer(os);
   os.close();
   clear();
   return true;
 }
+bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
+                                   const int cell_size,
+                                   const vector<double> &points,
+                                   const vector<int> &tets) {
+  
+    return write_mesh(path, dim, cell_size, points, tets, false);
+}
 bool VTUWriter::write_volume_mesh(const std::string &path, const int dim,
                                   const int cell_size,
                                   const vector<double> &points,
                                   const vector<int> &tets) {
+  
+    return write_mesh(path, dim, cell_size, points, tets, true);
+}
+bool VTUWriter::write_point_cloud(const std::string &path, const int dim,
+                                  const vector<double> &points) {
+  
   assert(dim > 1);
-  assert(cell_size > 2);
 
   std::ofstream os;
   os.open(path.c_str());
@@ -238,13 +249,22 @@ bool VTUWriter::write_volume_mesh(const std::string &path, const int dim,
     return false;
   }
   int num_points = points.size() / dim;
-  int num_cells = tets.size() / cell_size;
 
-  write_header(num_points, num_cells, os);
-  write_points(num_points, points, os, true);
+  write_header(num_points, 0, os);
+  write_points(num_points, points, os, false);
   write_point_data(os);
-  write_cells(cell_size, tets, os, true);
+  os << "<Cells>\n";
+  /////////////////////////////////////////////////////////////////////////////
+  // List vertex id's i=0, ..., n_vertices associated with each cell c
+  os << "<DataArray type=\"Int64\" Name=\"connectivity\" "
+        "format=\"ascii\">\n";
 
+  os << "</DataArray>\n";
+  os << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\" "
+        "RangeMin=\""
+     <<1e+299 << "\" RangeMax=\"" << -1e+299 << "\">\n";
+  os << "</DataArray>\n";
+  os << "</Cells>\n";
   write_footer(os);
   os.close();
   clear();

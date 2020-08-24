@@ -312,3 +312,63 @@ TEST_CASE("Multiple elements", "[mesh]"){
     }
     
 }
+
+TEST_CASE("Test point clouds", "[point]"){
+    vector<real_t> points;
+    vector<real_t> scalar_field;
+    vector<real_t> vector_field;
+    int dim;
+    int cell_size;
+    std::string filename;
+    SECTION("2D single point"){
+        dim = 2;
+        points = { 0., 1.};
+        scalar_field = { 0.};
+        vector_field = points;
+        filename = "single_point_2d.vtu";
+
+    }
+    SECTION("2D multiple points"){
+        points = {
+            0., 0.,
+            0., 1., 
+            1., 0.,
+            1., 1.
+        };
+        dim = 2;
+        scalar_field = { 0., 1.,2.,3.};
+        vector_field = points;
+        filename = "multi_point_2d.vtu";
+
+    }
+   SECTION("3D single point"){
+        points = {
+            0., 0., 0.
+        };
+        dim = 3;
+        scalar_field = { 0.};
+        vector_field = points;
+        filename = "single_point_3d.vtu";
+
+
+    }
+    SECTION("3D multiple points"){
+        points = {
+            0., 0., 1.,
+            0., 1., 0.,
+            1., 0., 1.,
+            1., 1., 1.
+        };
+        dim = 3;
+        scalar_field = { 0., 1.,2.,3.};
+        vector_field = points;
+        filename = "multi_point_3d.vtu";
+
+
+    }
+    VTUWriter writer;
+
+    writer.add_scalar_field("scalar_field", scalar_field);
+    writer.add_vector_field("vector_field", vector_field, dim);
+    writer.write_point_cloud(filename, dim, points);
+}
