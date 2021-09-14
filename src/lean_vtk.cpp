@@ -71,8 +71,60 @@ void VTUWriter::write_header(const int n_vertices, const int n_elements,
                              std::ostream &os) {
   os << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\">\n";
   os << "<UnstructuredGrid>\n";
+  write_field_data(os);
   os << "<Piece NumberOfPoints=\"" << n_vertices << "\" NumberOfCells=\""
      << n_elements << "\">\n";
+}
+
+//
+// per the VTK wiki, at https://vtk.org/Wiki/VTK/Tutorials/DataStorage
+//
+// "Arrays attached to the FieldData of a dataset describe global properties of
+//  the data. That is, if you want to save the time at which the data were
+//  recorded, you would put that value in the FieldData. If you wanted to name
+//  the data set, you would also put that in the FieldData. There are no
+//  restrictions about the length of arrays that are added to the FieldData."
+//
+void VTUWriter::add_field_data(const std::string& type,
+                               const std::string& name,
+                               const int& value) {
+    VTUWriter::FieldDataTuple t;
+    std::get<0>(t)=type;
+    std::get<1>(t)=name;
+    std::get<2>(t)=value;
+    field_data_.push_back(t);
+}
+void VTUWriter::add_field_data(const std::string& type,
+                               const std::string& name,
+                               const double& value) {
+    VTUWriter::FieldDataTuple t;
+    std::get<0>(t)=type;
+    std::get<1>(t)=name;
+    std::get<3>(t)=value;
+    field_data_.push_back(t);
+}
+void VTUWriter::write_field_data(std::ostream &os) {
+  if (field_data_.size()==0) {
+    return;
+  }
+  os << "<FieldData>\n";
+  for (auto t: field_data_) {
+    os << "<DataArray ";
+    std::string type=std::get<0>(t);
+    os << "type=\"" << type << "\" ";
+    os << "Name=\"" << std::get<1>(t) << "\" ";
+    os << "NumberOfTuples=\"1\" format=\"ascii\">\n";
+    // the data itself
+    if (type.find("Int")!=std::string::npos) {
+        os << std::get<2>(t) << "\n";
+    } else if (type.find("Float")!=std::string::npos) {
+        os << std::get<3>(t) << "\n";
+    } else {
+        os << "ERROR: field data type does not contain \"Int\" or \"Float\"\n";
+    }
+    os << "</DataArray>\n";
+  }
+  os << "</FieldData>\n";
 }
 
 void VTUWriter::write_footer(std::ostream &os) {
@@ -180,6 +232,7 @@ void VTUWriter::write_cell_data(std::ostream &os) {
   os << "</CellData>\n";
 }
 void VTUWriter::clear() {
+  field_data_.clear();
   point_data_.clear();
   cell_data_.clear();
 }
