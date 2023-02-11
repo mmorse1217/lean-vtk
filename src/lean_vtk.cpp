@@ -36,6 +36,8 @@ inline static int VTKTagVolume(const int n_vertices) {
 
 inline static int VTKTagPlanar(const int n_vertices) {
   switch (n_vertices) {
+  case 2:
+    return VTK_POLYGON;
   case 3:
     return VTK_TRIANGLE;
   case 4:
@@ -249,7 +251,7 @@ void VTUWriter::add_cell_field(const std::string &name, const vector<double> &da
 bool VTUWriter::write_mesh(std::ostream &os, const int dim, const int cell_size,
               const vector<double> &points, const vector<int> &tets, bool is_volume_mesh){
   assert(dim > 1);
-  assert(cell_size > 2);
+  assert(cell_size > 1);
 
   int num_points = points.size() / dim;
   int num_cells = tets.size() / cell_size;
