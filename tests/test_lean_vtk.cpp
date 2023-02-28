@@ -21,6 +21,9 @@ TEST_CASE("Single elements", "[single]"){
     int cell_size;
     std::string filename;
     bool is_volume_mesh = false;
+
+    VTUWriter writer;
+
     SECTION("Triangle 2D"){
         points = {
              1.,  1.,
@@ -112,6 +115,8 @@ TEST_CASE("Single elements", "[single]"){
         filename = "single_quad.vtu";
     }
     SECTION("Hex element"){
+        writer.add_field_data("Int32","CYCLE",123);
+        writer.add_field_data("Float64","TIME",4.56);
         points = {
              1.,  1., 1.,
              1., -1., 1.,
@@ -156,7 +161,6 @@ TEST_CASE("Single elements", "[single]"){
         filename = "single_tet.vtu";
         is_volume_mesh = true;
     }
-    VTUWriter writer;
 
     writer.add_scalar_field("scalar_field", scalar_field);
     writer.add_vector_field("vector_field", vector_field, dim);
