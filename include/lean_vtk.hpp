@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <tuple>
 
 namespace leanvtk {
 inline int index(int N, int i, int j) {
@@ -82,6 +83,14 @@ private:
 
 class VTUWriter {
 public:
+
+  void add_field_data(const std::string& type,
+                      const std::string& name,
+                      const int& value);
+  void add_field_data(const std::string& type,
+                      const std::string& name,
+                      const double& value);
+
   /**
    * Write surface mesh to a file
    * const string& path             filename to store vtk mesh (ending with .vtu)
@@ -341,6 +350,9 @@ public:
   void clear();
 
 private:
+  typedef std::tuple<std::string,std::string,int,double> FieldDataTuple;
+
+  std::vector<FieldDataTuple> field_data_;
   std::vector<VTKDataNode<double>> point_data_;
   std::vector<VTKDataNode<double>> cell_data_;
   std::string current_scalar_point_data_;
@@ -355,6 +367,8 @@ private:
 
   void write_header(const int n_vertices, const int n_elements,
                     std::ostream &os);
+
+  void write_field_data(std::ostream &os);
 
   void write_footer(std::ostream &os);
   
