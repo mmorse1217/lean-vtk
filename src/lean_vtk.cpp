@@ -13,11 +13,15 @@ std::string a_library_function(){
 
 namespace leanvtk {
 
-static const int VTK_TETRA = 10;
+static const int VTK_EMPTY_CELL = 0;
+static const int VTK_VERTEX = 1;
+static const int VTK_LINE = 3;
+static const int VTK_POLY_LINE = 4;
 static const int VTK_TRIANGLE = 5;
-static const int VTK_QUAD = 9;
-static const int VTK_HEXAHEDRON = 12;
 static const int VTK_POLYGON = 7;
+static const int VTK_QUAD = 9;
+static const int VTK_TETRA = 10;
+static const int VTK_HEXAHEDRON = 12;
 
 inline static int VTKTagVolume(const int n_vertices) {
   switch (n_vertices) {
@@ -36,6 +40,8 @@ inline static int VTKTagVolume(const int n_vertices) {
 
 inline static int VTKTagPlanar(const int n_vertices) {
   switch (n_vertices) {
+  case 1:
+    return VTK_VERTEX;
   case 2:
     return VTK_POLYGON;
   case 3:
@@ -317,28 +323,11 @@ bool VTUWriter::write_volume_mesh(std::ostream &os, const int dim,
 
 bool VTUWriter::write_point_cloud(std::ostream &os, const int dim,
                                   const vector<double> &points) {
-  
-  assert(dim > 1);
-
-  int num_points = points.size() / dim;
-
-  write_header(num_points, 0, os);
-  write_points(num_points, points, os, false);
-  write_point_data(os);
-  os << "<Cells>\n";
-  /////////////////////////////////////////////////////////////////////////////
-  // List vertex id's i=0, ..., n_vertices associated with each cell c
-  os << "<DataArray type=\"Int64\" Name=\"connectivity\" "
-        "format=\"ascii\">\n";
-
-  os << "</DataArray>\n";
-  os << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\" "
-        "RangeMin=\""
-     <<1e+299 << "\" RangeMax=\"" << -1e+299 << "\">\n";
-  os << "</DataArray>\n";
-  os << "</Cells>\n";
-  write_footer(os);
-  clear();
+  std::array<int> tets;
+  tets.resize(points.size());
+  for (long i = 0; i < points.size(); ++i)
+      tets[i] = i;
+  write_surface_mesh(os, dim, 1, points, tets);
   return true;
 }
 

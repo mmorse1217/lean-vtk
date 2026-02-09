@@ -200,9 +200,6 @@ public:
    *
    * const string& path             filename to store vtk mesh (ending with .vtu)
    * const int dim                  ambient dimension (2D or 3D)
-   * const int cell_size            number of vertices per cell 
-   *                                (3 for triangles, 4 for quads and tets, 8
-   *                                for hexes)
    * const vector<double>& points   list of point locations. If there are 
    *                                n points in the mesh, the format  of the
    *                                vector is:
@@ -210,14 +207,6 @@ public:
    *                                for 2D and 
    *                                  [x_1, y_1, z_1, ..., x_n, y_n, z_n]
    *                                for 3D.
-   * const vector<int >& elements   list of point indices per cell. Format  of the
-   *                                vector is:
-   *                                  [c_{1,1}, c_{1,2},..., c_{1, cell_size}, 
-   *                                  ...  
-   *                                  c_{m,1}, c_{m,2},..., c_{m, cell_size}]
-   *                                if there are m cells
-   *                                (i.e. index c*i corresponds to the ith
-   *                                vertex in the cth cell in the mesh
    */
   bool write_point_cloud(const std::string &path, const int dim,
                                     const std::vector<double> &points); 
