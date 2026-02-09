@@ -2,7 +2,7 @@
 # CMakeLists.txt. This is so that a user can clearly understand the reason the 
 # build will fail before the build actually occurs, instead of searching for the
 # CMake function that was used that is causing the failure.
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 # Set the global package-wide C++ standard. This will be inherited by all
 # targets specified in the project. One can also specify the C++ standard in a

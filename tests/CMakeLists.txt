@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 11)
 
 # Explicitly list the test source code and headers. The Catch header-only unit
