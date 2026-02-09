@@ -69,6 +69,7 @@ void VTUWriter::write_point_data(std::ostream &os) {
   os << ">\n";
 
   for (auto it = point_data_.begin(); it != point_data_.end(); ++it) {
+    it->set_binary(is_binary());
     it->write(os);
   }
 
@@ -89,27 +90,44 @@ void VTUWriter::write_footer(std::ostream &os) {
   os << "</VTKFile>\n";
 }
 
-void VTUWriter::write_points(const int num_points, const vector<double> &points,
+void VTUWriter::write_points(const int num_points,
+                             const vector<double> &points,
                              std::ostream &os, bool is_volume_mesh) {
   os << "<Points>\n";
   os << "<DataArray type=\"Float64\" NumberOfComponents=\"3\" "
-        "format=\"ascii\">\n";
-  const int dim = points.size() / num_points;
+        "format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
+  int dim = points.size() / num_points;
   assert(double(dim) == double(points.size()) / double(num_points));
 
-  for (int d = 0; d < num_points; ++d) {
-    for (int i = 0; i < dim; ++i) {
-      int idx = index(dim, d, i); 
-      os << points.at(idx);
-      if (i < dim - 1) {
-        os << " ";
+  vector<double> pts;
+  if (!is_volume_mesh && dim == 2) {
+    pts.resize(num_points * 3);
+    for (int d = 0; d < num_points; ++d) {
+      for (int i = 0; i < 2; ++i) {
+        const int idx = index(dim, d, i);
+        pts[idx] = points[idx];
       }
+      pts[index(dim, d, 2)] = 0;
     }
+    dim = 3;
+  } else {
+    pts = points;
+  }
 
-    if (!is_volume_mesh && dim == 2)
-      os << " 0";
-
-    os << "\n";
+  if (binary_)
+    os << base64_encode((unsigned char*)pts.data(),
+                        sizeof(double) * num_points * dim);
+  else {
+    for (int d = 0; d < num_points; ++d) {
+      for (int i = 0; i < dim; ++i) {
+        int idx = index(dim, d, i); 
+        os << pts.at(idx);
+        if (i < dim - 1) {
+          os << " ";
+        }
+      }
+      os << "\n";
+    }
   }
 
   os << "</DataArray>\n";
@@ -123,17 +141,25 @@ void VTUWriter::write_cells(const int n_vertices, const vector<int> &tets,
   /////////////////////////////////////////////////////////////////////////////
   // List vertex id's i=0, ..., n_vertices associated with each cell c
   os << "<DataArray type=\"Int64\" Name=\"connectivity\" "
-        "format=\"ascii\">\n";
-  for (int c = 0; c < n_cells; ++c) {
-    for (int i = 0; i < n_vertices; ++i) {
-      int idx = index(n_vertices, c, i);
-      const int v_index = tets.at(idx);
-      os << v_index;
-      if (i < n_vertices - 1) {
-        os << " ";
+        "format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
+  if (binary_) {
+    vector<uint64_t> connectivity(tets.size());
+    for (size_t i = 0; i < tets.size(); i++)
+      connectivity[i] = tets[i];
+    os << base64_encode((unsigned char*)connectivity.data(),
+                        sizeof(uint64_t) * tets.size());
+  } else {
+    for (int c = 0; c < n_cells; ++c) {
+      for (int i = 0; i < n_vertices; ++i) {
+        int idx = index(n_vertices, c, i);
+        const int v_index = tets.at(idx);
+        os << v_index;
+        if (i < n_vertices - 1) {
+          os << " ";
+        }
       }
+      os << "\n";
     }
-    os << "\n";
   }
 
   os << "</DataArray>\n";
@@ -155,14 +181,22 @@ void VTUWriter::write_cells(const int n_vertices, const vector<int> &tets,
   /////////////////////////////////////////////////////////////////////////////
   // List offsets to access the vertex indices of the ith cell. Non-trivial
   // if the mesh is a general polyognal mesh.
-  os << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\" "
-        "RangeMin=\""
-     << n_vertices << "\" RangeMax=\"" << n_cells * n_vertices << "\">\n";
+  os << "<DataArray type=\"Int64\" Name=\"offsets\" format=\""
+     << (binary_ ? "binary" : "ascii") << "\">\n"
+     << "RangeMin=\"" << n_vertices
+     << "\" RangeMax=\"" << n_cells * n_vertices << "\">\n";
 
-  int acc = n_vertices;
-  for (int i = 0; i < n_cells; ++i) {
-    os << acc << "\n";
-    acc += n_vertices;
+  vector<uint64_t> offsets(n_cells);
+  for (unsigned int i = 0; i < n_cells; ++i) {
+    offsets[i] = n_vertices * (i + 1);
+  }
+  if (binary_) {
+    os << base64_encode((unsigned char*)offsets.data(),
+                        sizeof(uint64_t) * n_cells);
+  } else {
+    for (auto offset : offsets) {
+      os << offset << "\n";
+    }
   }
 
   os << "</DataArray>\n";
@@ -182,6 +216,7 @@ void VTUWriter::write_cell_data(std::ostream &os) {
   os << ">\n";
 
   for (auto it = cell_data_.begin(); it != cell_data_.end(); ++it) {
+    it->set_binary(is_binary());
     it->write(os);
   }
 
@@ -192,66 +227,208 @@ void VTUWriter::clear() {
   cell_data_.clear();
 }
 
-void VTUWriter::add_field(const std::string &name, const vector<double> &data,
-                          const int &dimension) {
-  using std::abs;
-
-  vector<double> tmp(data.size(), 0.);
-
-  for (long i = 0; i < data.size(); ++i)
-    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
-
-  if (dimension == 1)
-    add_scalar_field(name, tmp);
-  else
-    add_vector_field(name, tmp, dimension);
-}
-
+template<>
 void VTUWriter::add_scalar_field(const std::string &name,
                                  const vector<double> &data) {
-  point_data_.push_back(VTKDataNode<double>());
-  point_data_.back().initialize(name, "Float64", data);
+  vector<double> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  point_data_.push_back(make_data_node(name, tmp));
   current_scalar_point_data_ = name;
 }
 
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<float> &data) {
+  vector<float> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  point_data_.push_back(make_data_node(name, tmp));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<uint8_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<uint16_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<uint32_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<uint64_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
 void VTUWriter::add_vector_field(const std::string &name,
                                  const vector<double> &data,
                                  const int &dimension) {
-  point_data_.push_back(VTKDataNode<double>());
-
-  point_data_.back().initialize(name, "Float64", data, dimension);
+  vector<double> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  point_data_.push_back(make_data_node(name, tmp, "Float", dimension));
   current_vector_point_data_ = name;
 }
 
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<float> &data,
+                                 const int &dimension) {
+  vector<float> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  point_data_.push_back(make_data_node(name, tmp, "Float", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<uint8_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<uint16_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<uint32_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<uint64_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
 void VTUWriter::add_cell_scalar_field(const std::string &name,
-                                 const vector<double> &data) {
-  cell_data_.push_back(VTKDataNode<double>());
-  cell_data_.back().initialize(name, "Float64", data);
+                                      const vector<double> &data) {
+  vector<double> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  cell_data_.push_back(make_data_node(name, tmp, "Float"));
   current_scalar_cell_data_ = name;
 }
 
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<float> &data) {
+  vector<float> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  cell_data_.push_back(make_data_node(name, tmp, "Float"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<uint8_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<uint16_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<uint32_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<uint64_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
 void VTUWriter::add_cell_vector_field(const std::string &name,
                                  const vector<double> &data,
                                  const int &dimension) {
-  cell_data_.push_back(VTKDataNode<double>());
-
-  cell_data_.back().initialize(name, "Float64", data, dimension);
+  vector<double> tmp(data.size());
+  for (long i = 0; i < data.size(); ++i)
+    tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  cell_data_.push_back(make_data_node(name, tmp, "Float", dimension));
   current_vector_cell_data_ = name;
 }
 
-void VTUWriter::add_cell_field(const std::string &name, const vector<double> &data,
-                          const int &dimension) {
-  using std::abs;
-
-  vector<double> tmp(data.size(), 0.);
-
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<float> &data,
+                                 const int &dimension) {
+  vector<float> tmp(data.size());
   for (long i = 0; i < data.size(); ++i)
     tmp[i] = std::abs(data[i]) < 1e-16 ? 0 : data[i];
+  cell_data_.push_back(make_data_node(name, tmp, "Float", dimension));
+  current_vector_cell_data_ = name;
+}
 
-  if (dimension == 1)
-    add_cell_scalar_field(name, tmp);
-  else
-    add_cell_vector_field(name, tmp, dimension);
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<uint8_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<uint16_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<uint32_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<uint64_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
 }
 
 bool VTUWriter::write_mesh(std::ostream &os, const int dim, const int cell_size,
@@ -323,7 +500,7 @@ bool VTUWriter::write_volume_mesh(std::ostream &os, const int dim,
 
 bool VTUWriter::write_point_cloud(std::ostream &os, const int dim,
                                   const vector<double> &points) {
-  std::array<int> tets;
+  vector<int> tets;
   tets.resize(points.size());
   for (long i = 0; i < points.size(); ++i)
       tets[i] = i;

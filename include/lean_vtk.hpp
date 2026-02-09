@@ -9,27 +9,98 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace leanvtk {
 inline int index(int N, int i, int j) {
   assert(N > 0);
   return i * N + j;
 }
-template <typename T> class VTKDataNode {
+
+static const char base64_encoding_table[] = {
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+  'w', 'x', 'y', 'z', '0', '1', '2', '3',
+  '4', '5', '6', '7', '8', '9', '+', '/'};
+
+static const int base64_mod_table[] = {0, 2, 1};
+
+inline std::string base64_encode(const unsigned char *data,
+                                 size_t input_length) {
+    size_t output_length = 4 * ((input_length + 2) / 3);
+    std::string encoded_data;
+    encoded_data.resize(output_length);
+
+    for (int i = 0, j = 0; i < input_length;) {
+        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
+
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+        encoded_data[j++] = base64_encoding_table[(triple >> 3 * 6) & 0x3F];
+        encoded_data[j++] = base64_encoding_table[(triple >> 2 * 6) & 0x3F];
+        encoded_data[j++] = base64_encoding_table[(triple >> 1 * 6) & 0x3F];
+        encoded_data[j++] = base64_encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+    for (int i = 0; i < base64_mod_table[input_length % 3]; i++)
+        encoded_data[output_length - 1 - i] = '=';
+
+    return encoded_data;
+}
+
+
+class VTKDataNodeBase {
+public:
+  VTKDataNodeBase(const std::string &name="") 
+      : name_(name)
+      , binary_(false)
+  {}
+
+  virtual void write(std::ostream &os) const{};
+
+  /// Set the format to binary
+  inline void set_binary() { binary_ = true; }
+
+  /// Set the format to ASCII
+  inline void set_ascii() { binary_ = false; }
+
+  /// Set whether binary format is considered or not
+  inline void set_binary(bool enable) { binary_ = enable; }
+
+  /// Get if binary format is enabled
+  inline bool is_binary() { return binary_; }
+protected:
+  std::string name_;
+  bool binary_;
+};
+
+template <typename T>
+class VTKDataNode : public VTKDataNodeBase {
 
 public:
-  VTKDataNode() {}
+  VTKDataNode()
+      : VTKDataNodeBase()
+  {}
 
   VTKDataNode(const std::string &name, const std::string &numeric_type,
-              const std::vector<double> &data = std::vector<double>(),
+              const std::vector<T> &data = std::vector<double>(),
               const int n_components = 1)
-      : name_(name), numeric_type_(numeric_type), data_(data),
-        n_components_(n_components) {}
+      : VTKDataNodeBase(name)
+      , numeric_type_(numeric_type)
+      , data_(data)
+      , n_components_(n_components)
+  {}
 
-  inline std::vector<double> &data() { return data_; }
+  inline std::vector<T> &data() { return data_; }
 
   void initialize(const std::string &name, const std::string &numeric_type,
-                  const std::vector<double> &data, const int n_components = 1) {
+                  const std::vector<T> &data, const int n_components = 1) {
     name_ = name;
     numeric_type_ = numeric_type;
     data_ = data;
@@ -37,34 +108,30 @@ public:
   }
 
   void write(std::ostream &os) const {
-    // NOTE this writer implicitly assumes that 2D vectors will live in 2D
-    // space. To decouple this, vtk_num_components must match n_components_
-    // and the conditional if(n_components_==2){...} must be corrected for the
-    // context.
-    int vtk_num_components = n_components_ == 2 ? n_components_ + 1 : n_components_;
     os << "<DataArray type=\"" << numeric_type_ << "\" Name=\"" << name_
-       << "\" NumberOfComponents=\"" << vtk_num_components
-       << "\" format=\"ascii\">\n";
+       << "\" NumberOfComponents=\"" << n_components_
+       << "\" format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
     if (n_components_ != 1) {
       std::cerr << "writing matrix in vtu file (check ordering of values)"
                 << std::endl;
     }
 
-    const int num_points = data_.size() / n_components_;
 
-    for (int d = 0; d < num_points; ++d) {
-      for (int i = 0; i < n_components_; ++i) {
-        int idx = index(n_components_, d, i); 
-        os << data_.at(idx);
-        if (i < n_components_ - 1) {
-          os << " ";
+    if (binary_) {
+      os << base64_encode((unsigned char*)data_.data(),
+                          sizeof(T) * data_.size());
+    } else {
+      const int num_points = data_.size() / n_components_;
+      for (int d = 0; d < num_points; ++d) {
+        for (int i = 0; i < n_components_; ++i) {
+          int idx = index(n_components_, d, i); 
+          os << data_.at(idx);
+          if (i < n_components_ - 1) {
+            os << " ";
+          }
         }
+        os << "\n";
       }
-
-      if(n_components_==2)
-         os << " 0";
-
-      os << "\n";
     }
 
     os << "</DataArray>\n";
@@ -73,10 +140,8 @@ public:
   inline bool empty() const { return data_.size() <= 0; }
 
 private:
-  std::string name_;
-  
   std::string numeric_type_;
-  std::vector<double> data_;
+  std::vector<T> data_;
   int n_components_;
 };
 
@@ -209,7 +274,7 @@ public:
    *                                for 3D.
    */
   bool write_point_cloud(const std::string &path, const int dim,
-                                    const std::vector<double> &points); 
+                         const std::vector<double> &points); 
 
   /**
    * Write point cloud to a file
@@ -250,9 +315,16 @@ public:
    *                                if there are n points in the mesh
    * const int dimension            ambient dimension (2D or 3D)
    */
-  void add_field(const std::string &name, 
-                 const std::vector<double> &data,
-                 const int &dimension);
+  template <typename T>
+  inline void add_field(const std::string &name, 
+                        const std::vector<T> &data,
+                        const int &dimension)
+  {
+    if (dimension == 1)
+      add_scalar_field<T>(name, data);
+    else
+      add_vector_field<T>(name, data, dimension);
+  }
 
   /**
    * Add a general cell/element field to the mesh
@@ -266,9 +338,16 @@ public:
    *                                if there are m cells in the mesh
    * const int dimension            ambient dimension (2D or 3D)
    */
+  template <typename T>
   void add_cell_field(const std::string &name,
-                 const std::vector<double> &data,
-                 const int &dimension);
+                 const std::vector<T> &data,
+                 const int &dimension)
+  {
+    if (dimension == 1)
+      add_cell_scalar_field<T>(name, data);
+    else
+      add_cell_vector_field<T>(name, data, dimension);
+  }
 
   /**
    * Add a scalar field to the mesh
@@ -279,8 +358,9 @@ public:
    *                                  [f_1, f_2,..., f_n]
    *                                if there are n points in the mesh
    */
+  template <typename T>
   void add_scalar_field(const std::string &name,
-                        const std::vector<double> &data);
+                        const std::vector<T> &data);
 
   /**
    * Add a scalar field to cells/elements of the mesh
@@ -291,8 +371,9 @@ public:
    *                                  [f_1, f_2,..., f_m]
    *                                if there are m cells in the mesh
    */
+  template <typename T>
   void add_cell_scalar_field(const std::string &name,
-                        const std::vector<double> &data);
+                        const std::vector<T> &data);
 
   /**
    * Add a vector field to the mesh
@@ -306,8 +387,9 @@ public:
    *                                if there are n points in the mesh
    * const int dimension            ambient dimension (2D or 3D)
    */
+  template <typename T>
   void add_vector_field(const std::string &name,
-                        const std::vector<double> &data, 
+                        const std::vector<T> &data, 
                         const int &dimension);
 
   /**
@@ -319,25 +401,37 @@ public:
    *                                  [f_{1,1}, f_{1,2},..., f_{1, dimension},
    *                                  ...
    *                                  f_{m,1}, f_{m,2},..., f_{m, dimension}]
-   *                                if there are m cells in the mesh
+   *                                if there are m bool binary = falsecells in the mesh
    * const int dimension            ambient dimension (2D or 3D)
    */
+  template <typename T>
   void add_cell_vector_field(const std::string &name,
-                        const std::vector<double> &data,
+                        const std::vector<T> &data,
                         const int &dimension);
 
   // Remove all fields and initialized data from the writer.
   void clear();
 
+  /// Set the format to binary
+  inline void set_binary() { binary_ = true; }
+
+  /// Set the format to ASCII
+  inline void set_ascii() { binary_ = false; }
+
+  /// Set whether binary format is considered or not
+  inline void set_binary(bool enable) { binary_ = enable; }
+
+  /// Get if binary format is enabled
+  inline bool is_binary() { return binary_; }
 private:
-  std::vector<VTKDataNode<double>> point_data_;
-  std::vector<VTKDataNode<double>> cell_data_;
+  std::vector<VTKDataNodeBase> point_data_;
+  std::vector<VTKDataNodeBase> cell_data_;
   std::string current_scalar_point_data_;
   std::string current_vector_point_data_;
   std::string current_scalar_cell_data_;
   std::string current_vector_cell_data_;
+  bool binary_;
 
-  
   void write_point_data(std::ostream &os);
 
   void write_cell_data(std::ostream &os);
@@ -360,7 +454,22 @@ private:
 
   void write_cells(const int n_vertices, const std::vector<int> &tets,
                    std::ostream &os, bool is_volume_mesh = true);
-  };
+
+  template <typename T>
+  inline VTKDataNode<T> make_data_node(const std::string &name,
+                                       const std::vector<T> &data,
+                                       std::string num_type="Float",
+                                       const int dimension=1)
+  {
+    VTKDataNode<T> node;
+    node.initialize(name,
+                    num_type + std::to_string(8 * sizeof(T)),
+                    data,
+                    dimension);
+    return node;
+  }
+};
+
 } // namespace leanvtk
 
 #endif // VTU_WRITER_HPP
