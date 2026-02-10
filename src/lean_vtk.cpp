@@ -57,6 +57,13 @@ inline static int VTKTagPlanar(const int n_vertices) {
   }
 }
 
+VTUWriter::~VTUWriter() {
+  for (auto node : point_data_)
+    delete node;
+  for (auto node : cell_data_)
+    delete node;
+}
+
 void VTUWriter::write_point_data(std::ostream &os) {
   if (current_scalar_point_data_.empty() && current_vector_point_data_.empty())
     return;
@@ -68,9 +75,9 @@ void VTUWriter::write_point_data(std::ostream &os) {
     os << "Vectors=\"" << current_vector_point_data_ << "\" ";
   os << ">\n";
 
-  for (auto it = point_data_.begin(); it != point_data_.end(); ++it) {
-    it->set_binary(is_binary());
-    it->write(os);
+  for (auto node : point_data_) {
+    node->set_binary(is_binary());
+    node->write(os);
   }
 
   os << "</PointData>\n";
@@ -235,9 +242,9 @@ void VTUWriter::write_cell_data(std::ostream &os) {
     os << "Vectors=\"" << current_vector_cell_data_ << "\" ";
   os << ">\n";
 
-  for (auto it = cell_data_.begin(); it != cell_data_.end(); ++it) {
-    it->set_binary(is_binary());
-    it->write(os);
+  for (auto node : cell_data_) {
+    node->set_binary(is_binary());
+    node->write(os);
   }
 
   os << "</CellData>\n";

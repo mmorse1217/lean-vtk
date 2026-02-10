@@ -129,9 +129,6 @@ public:
   {
   };
 
-  /// Get the inner type of the data node
-  inline vtkDataNodeTypes type() const { return inner_type_; }
-
   /// Set the format to binary
   inline void set_binary() { binary_ = true; }
 
@@ -179,12 +176,6 @@ public:
     os << "<DataArray type=\"" << numeric_type_ << "\" Name=\"" << name_
        << "\" NumberOfComponents=\"" << n_components_
        << "\" format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
-    if (n_components_ != 1) {
-      std::cerr << "writing matrix in vtu file (check ordering of values)"
-                << std::endl;
-    }
-
-
     if (binary_) {
       uint64_t data_bytes = sizeof(T) * data_.size();
       os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
@@ -221,6 +212,8 @@ public:
   VTUWriter()
       : binary_(false)
   {}
+
+  ~VTUWriter();
 
   /**
    * Write surface mesh to a file
@@ -499,8 +492,8 @@ public:
   /// Get if binary format is enabled
   inline bool is_binary() { return binary_; }
 private:
-  std::vector<VTKDataNodeBase> point_data_;
-  std::vector<VTKDataNodeBase> cell_data_;
+  std::vector<VTKDataNodeBase*> point_data_;
+  std::vector<VTKDataNodeBase*> cell_data_;
   std::string current_scalar_point_data_;
   std::string current_vector_point_data_;
   std::string current_scalar_cell_data_;
@@ -531,16 +524,16 @@ private:
                    std::ostream &os, bool is_volume_mesh = true);
 
   template <typename T>
-  inline VTKDataNode<T> make_data_node(const std::string &name,
-                                       const std::vector<T> &data,
-                                       std::string num_type="Float",
-                                       const int dimension=1)
+  inline static VTKDataNode<T>* make_data_node(const std::string &name,
+                                               const std::vector<T> &data,
+                                               std::string num_type="Float",
+                                               const int dimension=1)
   {
-    VTKDataNode<T> node;
-    node.initialize(name,
-                    num_type + std::to_string(8 * sizeof(T)),
-                    data,
-                    dimension);
+    VTKDataNode<T>* node = new VTKDataNode<T>(
+      name,
+      num_type + std::to_string(8 * sizeof(T)),
+      data,
+      dimension);
     return node;
   }
 };
