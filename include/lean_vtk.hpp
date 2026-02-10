@@ -17,52 +17,120 @@ inline int index(int N, int i, int j) {
   return i * N + j;
 }
 
-static const char base64_encoding_table[] = {
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-  'w', 'x', 'y', 'z', '0', '1', '2', '3',
-  '4', '5', '6', '7', '8', '9', '+', '/'};
+namespace base64 {
+static const unsigned char encode_table[65] =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  "abcdefghijklmnopqrstuvwxyz"
+  "0123456789+/";
 
-static const int base64_mod_table[] = {0, 2, 1};
+inline static unsigned char encode_char(unsigned char c)
+{
+  assert(c < 65);
+  return encode_table[c];
+}
 
-inline std::string base64_encode(const unsigned char *data,
-                                 size_t input_length) {
-    size_t output_length = 4 * ((input_length + 2) / 3);
+inline void encode_triplet(
+  unsigned char i0, unsigned char i1, unsigned char i2,
+  unsigned char* o0, unsigned char* o1, unsigned char* o2, unsigned char* o3)
+{
+  *o0 = encode_char((i0 >> 2) & 0x3F);
+  *o1 = encode_char(((i0 << 4) & 0x30) | ((i1 >> 4) & 0x0F));
+  *o2 = encode_char(((i1 << 2) & 0x3C) | ((i2 >> 6) & 0x03));
+  *o3 = encode_char(i2 & 0x3F);
+}
+
+inline void encode_pair(
+  unsigned char i0, unsigned char i1,
+  unsigned char* o0, unsigned char* o1, unsigned char* o2, unsigned char* o3)
+{
+  *o0 = encode_char((i0 >> 2) & 0x3F);
+  *o1 = encode_char(((i0 << 4) & 0x30) | ((i1 >> 4) & 0x0F));
+  *o2 = encode_char(((i1 << 2) & 0x3C));
+  *o3 = '=';
+}
+
+inline void encode_single(
+  unsigned char i0,
+  unsigned char* o0, unsigned char* o1, unsigned char* o2, unsigned char* o3)
+{
+  *o0 = encode_char((i0 >> 2) & 0x3F);
+  *o1 = encode_char(((i0 << 4) & 0x30));
+  *o2 = '=';
+  *o3 = '=';
+}
+
+inline unsigned long encoder(
+  const unsigned char* input, unsigned long length,
+  unsigned char* output, int mark_end=0)
+{
+  const unsigned char* ptr = input;
+  const unsigned char* end = input + length;
+  unsigned char* optr = output;
+
+  // Encode complete triplet
+
+  while ((end - ptr) >= 3)
+  {
+    encode_triplet(
+      ptr[0], ptr[1], ptr[2], &optr[0], &optr[1], &optr[2], &optr[3]);
+    ptr += 3;
+    optr += 4;
+  }
+
+  // Encodes a 2-byte ending into 3 bytes and 1 pad byte and writes.
+
+  if (end - ptr == 2)
+  {
+    encode_pair(ptr[0], ptr[1], &optr[0], &optr[1], &optr[2], &optr[3]);
+    optr += 4;
+  }
+
+  // Encodes a 1-byte ending into 2 bytes and 2 pad bytes
+
+  else if (end - ptr == 1)
+  {
+    encode_single(ptr[0], &optr[0], &optr[1], &optr[2], &optr[3]);
+    optr += 4;
+  }
+
+  // Do we need to mark the end
+
+  else if (mark_end)
+  {
+    optr[0] = optr[1] = optr[2] = optr[3] = '=';
+    optr += 4;
+  }
+
+  return optr - output;
+}
+
+inline std::string encode(const unsigned char *data,
+                          size_t input_length) {
+    size_t output_length = input_length / 3 * 4 + 4;
     std::string encoded_data;
+    encoded_data.resize(output_length, ' ');
+    output_length = encoder(data,
+                            input_length,
+                            (unsigned char*)encoded_data.data());
     encoded_data.resize(output_length);
-
-    for (int i = 0, j = 0; i < input_length;) {
-        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
-        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
-        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
-
-        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
-
-        encoded_data[j++] = base64_encoding_table[(triple >> 3 * 6) & 0x3F];
-        encoded_data[j++] = base64_encoding_table[(triple >> 2 * 6) & 0x3F];
-        encoded_data[j++] = base64_encoding_table[(triple >> 1 * 6) & 0x3F];
-        encoded_data[j++] = base64_encoding_table[(triple >> 0 * 6) & 0x3F];
-    }
-
-    for (int i = 0; i < base64_mod_table[input_length % 3]; i++)
-        encoded_data[output_length - 1 - i] = '=';
-
     return encoded_data;
 }
 
+} // namespace base64
 
 class VTKDataNodeBase {
 public:
-  VTKDataNodeBase(const std::string &name="") 
+  VTKDataNodeBase(const std::string &name="")
       : name_(name)
       , binary_(false)
   {}
 
-  virtual void write(std::ostream &os) const{};
+  virtual void write(std::ostream &os) const
+  {
+  };
+
+  /// Get the inner type of the data node
+  inline vtkDataNodeTypes type() const { return inner_type_; }
 
   /// Set the format to binary
   inline void set_binary() { binary_ = true; }
@@ -74,7 +142,7 @@ public:
   inline void set_binary(bool enable) { binary_ = enable; }
 
   /// Get if binary format is enabled
-  inline bool is_binary() { return binary_; }
+  inline bool is_binary() const { return binary_; }
 protected:
   std::string name_;
   bool binary_;
@@ -107,7 +175,7 @@ public:
     n_components_ = n_components;
   }
 
-  void write(std::ostream &os) const {
+  void write(std::ostream &os) const override {
     os << "<DataArray type=\"" << numeric_type_ << "\" Name=\"" << name_
        << "\" NumberOfComponents=\"" << n_components_
        << "\" format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
@@ -118,8 +186,11 @@ public:
 
 
     if (binary_) {
-      os << base64_encode((unsigned char*)data_.data(),
-                          sizeof(T) * data_.size());
+      uint64_t data_bytes = sizeof(T) * data_.size();
+      os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
+         << base64::encode((unsigned char*)data_.data(),
+                           data_bytes)
+         << "\n";
     } else {
       const int num_points = data_.size() / n_components_;
       for (int d = 0; d < num_points; ++d) {
@@ -147,6 +218,10 @@ private:
 
 class VTUWriter {
 public:
+  VTUWriter()
+      : binary_(false)
+  {}
+
   /**
    * Write surface mesh to a file
    * const string& path             filename to store vtk mesh (ending with .vtu)

@@ -78,7 +78,18 @@ void VTUWriter::write_point_data(std::ostream &os) {
 
 void VTUWriter::write_header(const int n_vertices, const int n_elements,
                              std::ostream &os) {
-  os << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\">\n";
+  os << "<?xml version=\"1.0\"?>\n";
+  os << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\"";
+  if (binary_) {
+    os << " header_type=\"UInt64\"";
+    int n = 1;
+    if(*(char *)&n == 1) {
+      os << " byte_order=\"LittleEndian\"";
+    } else {
+      os << " byte_order=\"BigEndian\"";
+    }
+  }
+  os << ">\n";
   os << "<UnstructuredGrid>\n";
   os << "<Piece NumberOfPoints=\"" << n_vertices << "\" NumberOfCells=\""
      << n_elements << "\">\n";
@@ -105,19 +116,22 @@ void VTUWriter::write_points(const int num_points,
     for (int d = 0; d < num_points; ++d) {
       for (int i = 0; i < 2; ++i) {
         const int idx = index(dim, d, i);
-        pts[idx] = points[idx];
+        pts[index(3, d, i)] = points[index(dim, d, i)];
       }
-      pts[index(dim, d, 2)] = 0;
+      pts[index(3, d, 2)] = 0;
     }
     dim = 3;
   } else {
     pts = points;
   }
 
-  if (binary_)
-    os << base64_encode((unsigned char*)pts.data(),
-                        sizeof(double) * num_points * dim);
-  else {
+  if (binary_) {
+    uint64_t data_bytes = sizeof(double) * pts.size();
+    os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
+       << base64::encode((unsigned char*)pts.data(),
+                         data_bytes)
+       << "\n";
+  } else {
     for (int d = 0; d < num_points; ++d) {
       for (int i = 0; i < dim; ++i) {
         int idx = index(dim, d, i); 
@@ -146,8 +160,11 @@ void VTUWriter::write_cells(const int n_vertices, const vector<int> &tets,
     vector<uint64_t> connectivity(tets.size());
     for (size_t i = 0; i < tets.size(); i++)
       connectivity[i] = tets[i];
-    os << base64_encode((unsigned char*)connectivity.data(),
-                        sizeof(uint64_t) * tets.size());
+    uint64_t data_bytes = sizeof(uint64_t) * connectivity.size();
+    os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
+       << base64::encode((unsigned char*)connectivity.data(),
+                         data_bytes)
+       << "\n";
   } else {
     for (int c = 0; c < n_cells; ++c) {
       for (int i = 0; i < n_vertices; ++i) {
@@ -182,17 +199,20 @@ void VTUWriter::write_cells(const int n_vertices, const vector<int> &tets,
   // List offsets to access the vertex indices of the ith cell. Non-trivial
   // if the mesh is a general polyognal mesh.
   os << "<DataArray type=\"Int64\" Name=\"offsets\" format=\""
-     << (binary_ ? "binary" : "ascii") << "\">\n"
-     << "RangeMin=\"" << n_vertices
-     << "\" RangeMax=\"" << n_cells * n_vertices << "\">\n";
+     << (binary_ ? "binary" : "ascii") << "\" "
+     << "RangeMin=\"" << n_vertices << "\" "
+     << "RangeMax=\"" << n_cells * n_vertices << "\">\n";
 
   vector<uint64_t> offsets(n_cells);
   for (unsigned int i = 0; i < n_cells; ++i) {
     offsets[i] = n_vertices * (i + 1);
   }
   if (binary_) {
-    os << base64_encode((unsigned char*)offsets.data(),
-                        sizeof(uint64_t) * n_cells);
+    uint64_t data_bytes = sizeof(uint64_t) * offsets.size();
+    os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
+       << base64::encode((unsigned char*)offsets.data(),
+                         data_bytes)
+       << "\n";
   } else {
     for (auto offset : offsets) {
       os << offset << "\n";
