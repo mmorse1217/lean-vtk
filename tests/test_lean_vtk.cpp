@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 
 #include "catch.hpp"
-#include <lean_vtk.hpp>
+#include <leanvtk.hpp>
 #include <string>
 #include <vector>
 #include <complex>

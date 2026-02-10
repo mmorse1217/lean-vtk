@@ -1,4 +1,4 @@
-#include <lean_vtk.hpp>
+#include <leanvtk.hpp>
 #include <cassert>
 #include <iostream>
 #include <vector>

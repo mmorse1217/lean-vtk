@@ -22,4 +22,4 @@ enable_testing()
 add_test(NAME TestLeanVTK  COMMAND TestLeanVTK)
 
 # Link our unit tests against the library we compiled
-target_link_libraries(TestLeanVTK LeanVTK)
+target_link_libraries(TestLeanVTK leanvtk)
