@@ -1,6 +1,6 @@
 
-#ifndef VTU_WRITER_HPP
-#define VTU_WRITER_HPP
+#ifndef LEANVTK_HPP
+#define LEANVTK_HPP
 
 #include <string>
 #include <cassert>
@@ -10,6 +10,20 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+
+#ifdef LeanVTK_EXPORTS
+#ifdef WIN32
+#define DECLDIR __declspec(dllexport)
+#else
+#define DECLDIR
+#endif
+#else
+#ifdef WIN32
+#define DECLDIR __declspec(dllimport)
+#else
+#define DECLDIR
+#endif
+#endif
 
 namespace leanvtk {
 
@@ -60,9 +74,10 @@ inline void encode_single(
   *o3 = '=';
 }
 
-inline unsigned long encoder(
-  const unsigned char* input, unsigned long length,
-  unsigned char* output, int mark_end=0)
+inline unsigned long encoder(const unsigned char* input,
+                             unsigned long length,
+                             unsigned char* output,
+                             int mark_end=0)
 {
   const unsigned char* ptr = input;
   const unsigned char* end = input + length;
@@ -208,10 +223,11 @@ private:
   int n_components_;
 };
 
-class VTUWriter {
+class DECLDIR VTUWriter {
 public:
   VTUWriter()
       : binary_(false)
+      , path_("")
   {}
 
   ~VTUWriter();
@@ -491,6 +507,8 @@ private:
   std::string current_scalar_cell_data_;
   std::string current_vector_cell_data_;
   bool binary_;
+  /// Last saved file path. Not available when using std::ostream to save
+  std::string path_;
 
   void write_point_data(std::ostream &os);
 
@@ -541,5 +559,4 @@ private:
 
 } // namespace leanvtk
 
-#endif // VTU_WRITER_HPP
-
+#endif  // LEANVTK_HPP

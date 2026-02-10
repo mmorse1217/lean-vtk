@@ -69,6 +69,9 @@ else()
     add_library(leanvtk STATIC ${LeanVTK_SRC} ${LeanVTK_INC})
 endif()
 
+# Explicitely ask to export the symbols
+target_compile_definitions(leanvtk PUBLIC LeanVTK_EXPORTS)
+
 # generator expressions are needed for the include directories, since installing headers changes the include path
 # Specify that leanvtk requires the files located in the include/ directory at
 # compile time. This would normally look like 
