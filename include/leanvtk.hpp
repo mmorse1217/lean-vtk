@@ -499,6 +499,9 @@ public:
 
   /// Get if binary format is enabled
   inline bool is_binary() { return binary_; }
+
+  /// Get the last saved file path (empty string if there is no such a path)
+  inline std::string filepath() { return path_; }
 private:
   std::vector<VTKDataNodeBase*> point_data_;
   std::vector<VTKDataNodeBase*> cell_data_;
@@ -556,6 +559,20 @@ private:
     return node;
   }
 };
+
+/** @brief Write a multiblock .vtm file on top of the already written VTUs
+ * @param path The output file path
+ * @param vtus The list of VTU files
+ */
+bool DECLDIR write_vtm(const std::string &path,
+                       std::vector<VTUWriter> vtus);
+
+/** @brief Write a multiblock .vtm file on top of the already written VTUs
+ * @param path The output file path
+ * @param vtus The list of VTU files
+ */
+bool DECLDIR write_vtm(std::ostream &os,
+                       std::vector<VTUWriter> vtus);
 
 } // namespace leanvtk
 

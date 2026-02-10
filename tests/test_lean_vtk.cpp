@@ -767,3 +767,57 @@ TEST_CASE("Test point clouds", "[point]"){
     writer.add_vector_field("vector_field", vector_field, dim);
     writer.write_point_cloud(filename, dim, points);
 }
+
+TEST_CASE("VTM", "[vtm]"){
+    vector<VTUWriter> vtus(2);
+    vector<real_t> points;
+    vector<size_t> elements;
+    vector<real_t> scalar_field;
+    vector<real_t> vector_field;
+    vector<real_t> cell_scalar_field;
+    vector<real_t> cell_vector_field;
+    size_t dim;
+    size_t cell_size;
+
+    {
+        // Write a piece with two triangles
+        points = {
+             1.,  1., -1.,
+             1., -1., 1.,
+            -1., -1., 0.,
+            2., 1., 1.
+        };
+        elements = {
+            0, 1, 2,
+            1, 3, 2 
+        };
+        vtus[0].set_binary();
+        vtus[0].write_surface_mesh("vtm_block0.vtu", 3, 3, points, elements);
+    }
+    {
+        // And another piece with 2 hexaedra
+        points = {
+             1.,  1., 1.,
+             1., -1., 1.,
+            -1., -1., 1.,
+            -1.,  1., 1.,
+             1.,  1.,-1.,
+             1., -1.,-1.,
+            -1., -1.,-1.,
+            -1.,  1.,-1.,
+             1.,  1., 3.,
+             1., -1., 3.,
+            -1., -1., 3.,
+            -1.,  1., 3.,
+
+        };
+        elements= {
+            0, 1, 2, 3, 4, 5, 6, 7,
+            8, 9, 10, 11,0, 1, 2, 3,
+        };
+        vtus[1].set_binary();
+        vtus[1].write_volume_mesh("vtm_block1.vtu", 3, 8, points, elements);
+    }
+
+    write_vtm("multiblock.vtm", vtus);
+}

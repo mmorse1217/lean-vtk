@@ -479,6 +479,7 @@ bool VTUWriter::write_mesh(std::ostream &os,
   write_cell_data(os);
   write_footer(os);
   clear();
+  path_ = "";
   return true;
 }
 
@@ -487,9 +488,7 @@ bool VTUWriter::write_mesh(const std::string &path,
                            const size_t cell_size,
                            const vector<double> &points,
                            const vector<size_t> &tets,
-                           bool is_volume_mesh){
-
-
+                           bool is_volume_mesh) {
   std::ofstream os;
   os.open(path.c_str());
   if (!os.good()) {
@@ -500,6 +499,8 @@ bool VTUWriter::write_mesh(const std::string &path,
   write_mesh(os, dim, cell_size, points, tets, is_volume_mesh);
 
   os.close();
+
+  path_ = path;
   return true;
 }
 
@@ -546,22 +547,49 @@ bool VTUWriter::write_point_cloud(std::ostream &os,
   tets.resize(points.size());
   for (size_t i = 0; i < points.size(); ++i)
       tets[i] = i;
-  write_surface_mesh(os, dim, 1, points, tets);
-  return true;
+  return write_surface_mesh(os, dim, 1, points, tets);
 }
 
 bool VTUWriter::write_point_cloud(const std::string &path,
                                   const size_t dim,
                                   const vector<double> &points) {
-  
+  vector<size_t> tets;
+  tets.resize(points.size());
+  for (size_t i = 0; i < points.size(); ++i)
+      tets[i] = i;
+  return write_surface_mesh(path, dim, 1, points, tets);
+}
+
+bool DECLDIR write_vtm(const std::string &path,
+                       std::vector<VTUWriter> vtus)
+{
   std::ofstream os;
   os.open(path.c_str());
   if (!os.good()) {
     os.close();
     return false;
   }
-  write_point_cloud(os, dim, points);
+
+  bool status = write_vtm(os, vtus);
+
   os.close();
+  return status;
+}
+
+bool DECLDIR write_vtm(std::ostream &os,
+                       std::vector<VTUWriter> vtus)
+{
+  for (auto vtu : vtus)
+    assert(vtu.filepath() != "");
+  os << "<?xml version=\"1.0\"?>\n"
+     << "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\">\n"
+     << "<vtkMultiBlockDataSet>\n";
+  for (size_t i = 0; i < vtus.size(); i++) {
+    os << "<DataSet index=\"" << i
+       << "\" file=\"" << vtus[i].filepath() << "\"/>\n";
+  }
+  os << "</vtkMultiBlockDataSet>\n"
+     << "</VTKFile>\n";
   return true;
 }
 
