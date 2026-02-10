@@ -12,7 +12,8 @@
 #include <cstdint>
 
 namespace leanvtk {
-inline int index(int N, int i, int j) {
+
+inline size_t _index(size_t N, size_t i, size_t j) {
   assert(N > 0);
   return i * N + j;
 }
@@ -186,7 +187,7 @@ public:
       const int num_points = data_.size() / n_components_;
       for (int d = 0; d < num_points; ++d) {
         for (int i = 0; i < n_components_; ++i) {
-          int idx = index(n_components_, d, i); 
+          int idx = _index(n_components_, d, i); 
           os << data_.at(idx);
           if (i < n_components_ - 1) {
             os << " ";
@@ -237,10 +238,10 @@ public:
    *                                  vertex in the cth cell in the mesh
    */
   bool write_surface_mesh(const std::string &path,
-                          const int dim,
-                          const int cell_size,
+                          const size_t dim,
+                          const size_t cell_size,
                           const std::vector<double> &points,
-                          const std::vector<int> &elements);
+                          const std::vector<size_t> &elements);
 
   /**
    * Write surface mesh to an output stream
@@ -264,10 +265,10 @@ public:
    *                                  vertex in the cth cell in the mesh
    */
   bool write_surface_mesh(std::ostream &os,
-                          const int dim,
-                          const int cell_size,
+                          const size_t dim,
+                          const size_t cell_size,
                           const std::vector<double> &points,
-                          const std::vector<int> &elements);
+                          const std::vector<size_t> &elements);
   /**
    * Write volume mesh to a file
    *
@@ -293,10 +294,10 @@ public:
    *                                vertex in the cth cell in the mesh
    */
   bool write_volume_mesh(const std::string &path, 
-                         const int dim,
-                         const int cell_size, 
+                         const size_t dim,
+                         const size_t cell_size, 
                          const std::vector<double> &points,
-                         const std::vector<int> &elements);
+                         const std::vector<size_t> &elements);
 
   /**
    * Write volume mesh to an output stream
@@ -323,10 +324,10 @@ public:
    *                                vertex in the cth cell in the mesh
    */
   bool write_volume_mesh(std::ostream &os,
-                         const int dim,
-                         const int cell_size,
+                         const size_t dim,
+                         const size_t cell_size,
                          const std::vector<double> &points,
-                         const std::vector<int> &elements);
+                         const std::vector<size_t> &elements);
 
   /**
    * Write point cloud to a file
@@ -341,7 +342,8 @@ public:
    *                                  [x_1, y_1, z_1, ..., x_n, y_n, z_n]
    *                                for 3D.
    */
-  bool write_point_cloud(const std::string &path, const int dim,
+  bool write_point_cloud(const std::string &path,
+                         const size_t dim,
                          const std::vector<double> &points); 
 
   /**
@@ -349,9 +351,6 @@ public:
    *
    * ostream &os                    output stream where to write vtk mesh (ending with .vtp)
    * const int dim                  ambient dimension (2D or 3D)
-   * const int cell_size            number of vertices per cell 
-   *                                (3 for triangles, 4 for quads and tets, 8
-   *                                for hexes)
    * const vector<double>& points   list of point locations. If there are 
    *                                n points in the mesh, the format  of the
    *                                vector is:
@@ -359,17 +358,10 @@ public:
    *                                for 2D and 
    *                                  [x_1, y_1, z_1, ..., x_n, y_n, z_n]
    *                                for 3D.
-   * const vector<int >& elements   list of point indices per cell. Format  of the
-   *                                vector is:
-   *                                  [c_{1,1}, c_{1,2},..., c_{1, cell_size}, 
-   *                                  ...  
-   *                                  c_{m,1}, c_{m,2},..., c_{m, cell_size}]
-   *                                if there are m cells
-   *                                (i.e. index c*i corresponds to the ith
-   *                                vertex in the cth cell in the mesh
    */
-  bool write_point_cloud(std::ostream &os, const int dim,
-                                    const std::vector<double> &points); 
+  bool write_point_cloud(std::ostream &os,
+                         const size_t dim,
+                         const std::vector<double> &points); 
 
   /**
    * Add a general field to the mesh
@@ -504,24 +496,33 @@ private:
 
   void write_cell_data(std::ostream &os);
 
-  void write_header(const int n_vertices, const int n_elements,
+  void write_header(const size_t n_vertices, const size_t n_elements,
                     std::ostream &os);
 
   void write_footer(std::ostream &os);
   
-  bool write_mesh(std::ostream &os, const int dim, const int cell_size,
-                  const std::vector<double> &points, const std::vector<int> &tets, 
+  bool write_mesh(std::ostream &os,
+                  const size_t dim,
+                  const size_t cell_size,
+                  const std::vector<double> &points,
+                  const std::vector<size_t> &tets, 
                   bool is_volume_mesh=true);
 
-  bool write_mesh(const std::string &path, const int dim, const int cell_size,
-                  const std::vector<double> &points, const std::vector<int> &tets, 
+  bool write_mesh(const std::string &path,
+                  const size_t dim, const size_t cell_size,
+                  const std::vector<double> &points,
+                  const std::vector<size_t> &tets, 
                   bool is_volume_mesh=true);
 
-  void write_points(const int num_points, const std::vector<double> &points,
-                    std::ostream &os, bool is_volume_mesh = true);
+  void write_points(std::ostream &os,
+                    const size_t num_points,
+                    const std::vector<double> &points,
+                    bool is_volume_mesh = true);
 
-  void write_cells(const int n_vertices, const std::vector<int> &tets,
-                   std::ostream &os, bool is_volume_mesh = true);
+  void write_cells(std::ostream &os,
+                   const size_t n_vertices,
+                   const std::vector<size_t> &tets,
+                   bool is_volume_mesh = true);
 
   template <typename T>
   inline static VTKDataNode<T>* make_data_node(const std::string &name,

@@ -10,12 +10,12 @@ Writing a single triangle to a vtk file:
              1., -1., 1.,
             -1., -1., 0.
         };
-    vector<int> elements = { 0, 1, 2 };
+    vector<size_t> elements = { 0, 1, 2 };
     vector<double> scalar_field = { 0., 1., 2.  };
     vector<double> vector_field = points;;
 
-    const int dim = 3;
-    const int cell_size = 3;
+    const size_t dim = 3;
+    const size_t cell_size = 3;
     std::string filename = "single_tri.vtu";
     VTUWriter writer;
     
@@ -27,7 +27,7 @@ Writing a single triangle to a vtk file:
 Other small examples for triangles, quads, hex and tet elements exist in `tests/test_lean_vtk.cpp`.
 
 ### Prerequisites
-* CMake >=3.1
+* CMake >=3.10
 * A C/C++ compiler with C++11 (tested with gcc 7.5.0)
 ### Installation
 

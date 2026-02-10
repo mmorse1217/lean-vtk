@@ -12,13 +12,13 @@ using  leanvtk::VTUWriter;
 typedef double real_t;
 TEST_CASE("Single elements", "[single]"){
     vector<real_t> points;
-    vector<int> elements;
+    vector<size_t> elements;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
     vector<real_t> cell_scalar_field;
     vector<real_t> cell_vector_field;
-    int dim;
-    int cell_size;
+    size_t dim;
+    size_t cell_size;
     std::string filename;
     bool is_volume_mesh = false;
     SECTION("Triangle 2D"){
@@ -174,13 +174,13 @@ TEST_CASE("Single elements", "[single]"){
 
 TEST_CASE("Single binary elements", "[single_bin]"){
     vector<real_t> points;
-    vector<int> elements;
+    vector<size_t> elements;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
     vector<real_t> cell_scalar_field;
     vector<real_t> cell_vector_field;
-    int dim;
-    int cell_size;
+    size_t dim;
+    size_t cell_size;
     std::string filename;
     bool is_volume_mesh = false;
     SECTION("Triangle 2D"){
@@ -337,13 +337,13 @@ TEST_CASE("Single binary elements", "[single_bin]"){
 
 TEST_CASE("Multiple elements", "[mesh]"){
     vector<real_t> points;
-    vector<int> elements;
+    vector<size_t> elements;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
     vector<real_t> cell_scalar_field;
     vector<real_t> cell_vector_field;
-    int dim;
-    int cell_size;
+    size_t dim;
+    size_t cell_size;
     std::string filename;
     bool is_volume_mesh = false;
     SECTION("Two triangle 2D"){
@@ -523,13 +523,13 @@ TEST_CASE("Multiple elements", "[mesh]"){
 
 TEST_CASE("Multiple binary elements", "[mesh_bin]"){
     vector<real_t> points;
-    vector<int> elements;
+    vector<size_t> elements;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
     vector<real_t> cell_scalar_field;
     vector<real_t> cell_vector_field;
-    int dim;
-    int cell_size;
+    size_t dim;
+    size_t cell_size;
     std::string filename;
     bool is_volume_mesh = false;
     SECTION("Two triangle 2D"){
@@ -712,8 +712,8 @@ TEST_CASE("Test point clouds", "[point]"){
     vector<real_t> points;
     vector<real_t> scalar_field;
     vector<real_t> vector_field;
-    int dim;
-    int cell_size;
+    size_t dim;
+    size_t cell_size;
     std::string filename;
     SECTION("2D single point"){
         dim = 2;

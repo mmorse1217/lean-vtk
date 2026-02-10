@@ -83,7 +83,7 @@ void VTUWriter::write_point_data(std::ostream &os) {
   os << "</PointData>\n";
 }
 
-void VTUWriter::write_header(const int n_vertices, const int n_elements,
+void VTUWriter::write_header(const size_t n_vertices, const size_t n_elements,
                              std::ostream &os) {
   os << "<?xml version=\"1.0\"?>\n";
   os << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\"";
@@ -108,24 +108,25 @@ void VTUWriter::write_footer(std::ostream &os) {
   os << "</VTKFile>\n";
 }
 
-void VTUWriter::write_points(const int num_points,
+void VTUWriter::write_points(std::ostream &os,
+                             const size_t num_points,
                              const vector<double> &points,
-                             std::ostream &os, bool is_volume_mesh) {
+                             bool is_volume_mesh) {
   os << "<Points>\n";
   os << "<DataArray type=\"Float64\" NumberOfComponents=\"3\" "
         "format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
-  int dim = points.size() / num_points;
-  assert(double(dim) == double(points.size()) / double(num_points));
+  assert(!(points.size() % num_points));
+  size_t dim = points.size() / num_points;
 
   vector<double> pts;
   if (!is_volume_mesh && dim == 2) {
     pts.resize(num_points * 3);
-    for (int d = 0; d < num_points; ++d) {
-      for (int i = 0; i < 2; ++i) {
-        const int idx = index(dim, d, i);
-        pts[index(3, d, i)] = points[index(dim, d, i)];
+    for (size_t d = 0; d < num_points; ++d) {
+      for (size_t i = 0; i < 2; ++i) {
+        const size_t idx = _index(dim, d, i);
+        pts[_index(3, d, i)] = points[_index(dim, d, i)];
       }
-      pts[index(3, d, 2)] = 0;
+      pts[_index(3, d, 2)] = 0;
     }
     dim = 3;
   } else {
@@ -141,7 +142,7 @@ void VTUWriter::write_points(const int num_points,
   } else {
     for (int d = 0; d < num_points; ++d) {
       for (int i = 0; i < dim; ++i) {
-        int idx = index(dim, d, i); 
+        int idx = _index(dim, d, i); 
         os << pts.at(idx);
         if (i < dim - 1) {
           os << " ";
@@ -155,27 +156,27 @@ void VTUWriter::write_points(const int num_points,
   os << "</Points>\n";
 }
 
-void VTUWriter::write_cells(const int n_vertices, const vector<int> &tets,
-                            std::ostream &os, bool is_volume_mesh) {
+void VTUWriter::write_cells(std::ostream &os,
+                            const size_t n_vertices,
+                            const vector<size_t> &tets,
+                            bool is_volume_mesh) {
   const int n_cells = tets.size() / n_vertices;
   os << "<Cells>\n";
   /////////////////////////////////////////////////////////////////////////////
   // List vertex id's i=0, ..., n_vertices associated with each cell c
-  os << "<DataArray type=\"Int64\" Name=\"connectivity\" "
-        "format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
+  os << "<DataArray type=\"UInt" << 8 * sizeof(size_t) << "\" "
+     << "Name=\"connectivity\" "
+     << "format=\"" << (binary_ ? "binary" : "ascii") << "\">\n";
   if (binary_) {
-    vector<uint64_t> connectivity(tets.size());
-    for (size_t i = 0; i < tets.size(); i++)
-      connectivity[i] = tets[i];
-    uint64_t data_bytes = sizeof(uint64_t) * connectivity.size();
-    os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
-       << base64::encode((unsigned char*)connectivity.data(),
+    size_t data_bytes = sizeof(size_t) * tets.size();
+    os << base64::encode((unsigned char*)(&data_bytes), sizeof(size_t))
+       << base64::encode((unsigned char*)tets.data(),
                          data_bytes)
        << "\n";
   } else {
     for (int c = 0; c < n_cells; ++c) {
       for (int i = 0; i < n_vertices; ++i) {
-        int idx = index(n_vertices, c, i);
+        int idx = _index(n_vertices, c, i);
         const int v_index = tets.at(idx);
         os << v_index;
         if (i < n_vertices - 1) {
@@ -205,18 +206,19 @@ void VTUWriter::write_cells(const int n_vertices, const vector<int> &tets,
   /////////////////////////////////////////////////////////////////////////////
   // List offsets to access the vertex indices of the ith cell. Non-trivial
   // if the mesh is a general polyognal mesh.
-  os << "<DataArray type=\"Int64\" Name=\"offsets\" format=\""
-     << (binary_ ? "binary" : "ascii") << "\" "
+  os << "<DataArray type=\"UInt" << 8 * sizeof(size_t) << "\" "
+     << "Name=\"offsets\" "
+     << "format=\"" << (binary_ ? "binary" : "ascii") << "\" "
      << "RangeMin=\"" << n_vertices << "\" "
      << "RangeMax=\"" << n_cells * n_vertices << "\">\n";
 
-  vector<uint64_t> offsets(n_cells);
+  vector<size_t> offsets(n_cells);
   for (unsigned int i = 0; i < n_cells; ++i) {
     offsets[i] = n_vertices * (i + 1);
   }
   if (binary_) {
-    uint64_t data_bytes = sizeof(uint64_t) * offsets.size();
-    os << base64::encode((unsigned char*)(&data_bytes), sizeof(uint64_t))
+    size_t data_bytes = sizeof(size_t) * offsets.size();
+    os << base64::encode((unsigned char*)(&data_bytes), sizeof(size_t))
        << base64::encode((unsigned char*)offsets.data(),
                          data_bytes)
        << "\n";
@@ -458,8 +460,12 @@ void VTUWriter::add_cell_vector_field(const std::string &name,
   current_vector_cell_data_ = name;
 }
 
-bool VTUWriter::write_mesh(std::ostream &os, const int dim, const int cell_size,
-              const vector<double> &points, const vector<int> &tets, bool is_volume_mesh){
+bool VTUWriter::write_mesh(std::ostream &os,
+                           const size_t dim,
+                           const size_t cell_size,
+                           const vector<double> &points,
+                           const vector<size_t> &tets,
+                           bool is_volume_mesh){
   assert(dim > 1);
   assert(cell_size > 1);
 
@@ -467,17 +473,21 @@ bool VTUWriter::write_mesh(std::ostream &os, const int dim, const int cell_size,
   int num_cells = tets.size() / cell_size;
 
   write_header(num_points, num_cells, os);
-  write_points(num_points, points, os, is_volume_mesh);
+  write_points(os, num_points, points, is_volume_mesh);
   write_point_data(os);
-  write_cells(cell_size, tets, os, is_volume_mesh);
+  write_cells(os, cell_size, tets, is_volume_mesh);
   write_cell_data(os);
   write_footer(os);
   clear();
   return true;
 }
 
-bool VTUWriter::write_mesh(const std::string &path, const int dim, const int cell_size,
-              const vector<double> &points, const vector<int> &tets, bool is_volume_mesh){
+bool VTUWriter::write_mesh(const std::string &path,
+                           const size_t dim,
+                           const size_t cell_size,
+                           const vector<double> &points,
+                           const vector<size_t> &tets,
+                           bool is_volume_mesh){
 
 
   std::ofstream os;
@@ -493,49 +503,55 @@ bool VTUWriter::write_mesh(const std::string &path, const int dim, const int cel
   return true;
 }
 
-bool VTUWriter::write_surface_mesh(const std::string &path, const int dim,
-                                   const int cell_size,
+bool VTUWriter::write_surface_mesh(const std::string &path,
+                                   const size_t dim,
+                                   const size_t cell_size,
                                    const vector<double> &points,
-                                   const vector<int> &tets) {
+                                   const vector<size_t> &tets) {
   
     return write_mesh(path, dim, cell_size, points, tets, false);
 }
 
-bool VTUWriter::write_volume_mesh(const std::string &path, const int dim,
-                                  const int cell_size,
+bool VTUWriter::write_volume_mesh(const std::string &path,
+                                  const size_t dim,
+                                  const size_t cell_size,
                                   const vector<double> &points,
-                                  const vector<int> &tets) {
+                                  const vector<size_t> &tets) {
   
     return write_mesh(path, dim, cell_size, points, tets, true);
 }
 
-bool VTUWriter::write_surface_mesh(std::ostream &os, const int dim,
-                                   const int cell_size,
+bool VTUWriter::write_surface_mesh(std::ostream &os,
+                                   const size_t dim,
+                                   const size_t cell_size,
                                    const vector<double> &points,
-                                   const vector<int> &tets) {
+                                   const vector<size_t> &tets) {
   
     return write_mesh(os, dim, cell_size, points, tets, false);
 }
 
-bool VTUWriter::write_volume_mesh(std::ostream &os, const int dim,
-                                  const int cell_size,
+bool VTUWriter::write_volume_mesh(std::ostream &os,
+                                  const size_t dim,
+                                  const size_t cell_size,
                                   const vector<double> &points,
-                                  const vector<int> &tets) {
+                                  const vector<size_t> &tets) {
   
     return write_mesh(os, dim, cell_size, points, tets, true);
 }
 
-bool VTUWriter::write_point_cloud(std::ostream &os, const int dim,
+bool VTUWriter::write_point_cloud(std::ostream &os,
+                                  const size_t dim,
                                   const vector<double> &points) {
-  vector<int> tets;
+  vector<size_t> tets;
   tets.resize(points.size());
-  for (long i = 0; i < points.size(); ++i)
+  for (size_t i = 0; i < points.size(); ++i)
       tets[i] = i;
   write_surface_mesh(os, dim, 1, points, tets);
   return true;
 }
 
-bool VTUWriter::write_point_cloud(const std::string &path, const int dim,
+bool VTUWriter::write_point_cloud(const std::string &path,
+                                  const size_t dim,
                                   const vector<double> &points) {
   
   std::ofstream os;
