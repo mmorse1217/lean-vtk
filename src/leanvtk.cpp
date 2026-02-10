@@ -278,29 +278,57 @@ void VTUWriter::add_scalar_field(const std::string &name,
 
 template<>
 void VTUWriter::add_scalar_field(const std::string &name,
-                                 const vector<uint8_t> &data) {
+                                 const vector<int8_t> &data) {
   point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<int16_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<int32_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<int64_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_scalar_field(const std::string &name,
+                                 const vector<uint8_t> &data) {
+  point_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_point_data_ = name;
 }
 
 template<>
 void VTUWriter::add_scalar_field(const std::string &name,
                                  const vector<uint16_t> &data) {
-  point_data_.push_back(make_data_node(name, data, "Int"));
+  point_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_point_data_ = name;
 }
 
 template<>
 void VTUWriter::add_scalar_field(const std::string &name,
                                  const vector<uint32_t> &data) {
-  point_data_.push_back(make_data_node(name, data, "Int"));
+  point_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_point_data_ = name;
 }
 
 template<>
 void VTUWriter::add_scalar_field(const std::string &name,
                                  const vector<uint64_t> &data) {
-  point_data_.push_back(make_data_node(name, data, "Int"));
+  point_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_point_data_ = name;
 }
 
@@ -328,9 +356,41 @@ void VTUWriter::add_vector_field(const std::string &name,
 
 template<>
 void VTUWriter::add_vector_field(const std::string &name,
-                                 const vector<uint8_t> &data,
+                                 const vector<int8_t> &data,
                                  const int &dimension) {
   point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<int16_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<int32_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<int64_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_point_data_ = name;
+}
+
+template<>
+void VTUWriter::add_vector_field(const std::string &name,
+                                 const vector<uint8_t> &data,
+                                 const int &dimension) {
+  point_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_point_data_ = name;
 }
 
@@ -338,7 +398,7 @@ template<>
 void VTUWriter::add_vector_field(const std::string &name,
                                  const vector<uint16_t> &data,
                                  const int &dimension) {
-  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  point_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_point_data_ = name;
 }
 
@@ -346,7 +406,7 @@ template<>
 void VTUWriter::add_vector_field(const std::string &name,
                                  const vector<uint32_t> &data,
                                  const int &dimension) {
-  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  point_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_point_data_ = name;
 }
 
@@ -354,7 +414,7 @@ template<>
 void VTUWriter::add_vector_field(const std::string &name,
                                  const vector<uint64_t> &data,
                                  const int &dimension) {
-  point_data_.push_back(make_data_node(name, data, "Int", dimension));
+  point_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_point_data_ = name;
 }
 
@@ -380,29 +440,57 @@ void VTUWriter::add_cell_scalar_field(const std::string &name,
 
 template<>
 void VTUWriter::add_cell_scalar_field(const std::string &name,
-                                      const vector<uint8_t> &data) {
+                                      const vector<int8_t> &data) {
   cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<int16_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<int32_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<int64_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "Int"));
+  current_scalar_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_scalar_field(const std::string &name,
+                                      const vector<uint8_t> &data) {
+  cell_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_cell_data_ = name;
 }
 
 template<>
 void VTUWriter::add_cell_scalar_field(const std::string &name,
                                       const vector<uint16_t> &data) {
-  cell_data_.push_back(make_data_node(name, data, "Int"));
+  cell_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_cell_data_ = name;
 }
 
 template<>
 void VTUWriter::add_cell_scalar_field(const std::string &name,
                                       const vector<uint32_t> &data) {
-  cell_data_.push_back(make_data_node(name, data, "Int"));
+  cell_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_cell_data_ = name;
 }
 
 template<>
 void VTUWriter::add_cell_scalar_field(const std::string &name,
                                       const vector<uint64_t> &data) {
-  cell_data_.push_back(make_data_node(name, data, "Int"));
+  cell_data_.push_back(make_data_node(name, data, "UInt"));
   current_scalar_cell_data_ = name;
 }
 
@@ -430,9 +518,41 @@ void VTUWriter::add_cell_vector_field(const std::string &name,
 
 template<>
 void VTUWriter::add_cell_vector_field(const std::string &name,
-                                 const vector<uint8_t> &data,
+                                 const vector<int8_t> &data,
                                  const int &dimension) {
   cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<int16_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<int32_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<int64_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  current_vector_cell_data_ = name;
+}
+
+template<>
+void VTUWriter::add_cell_vector_field(const std::string &name,
+                                 const vector<uint8_t> &data,
+                                 const int &dimension) {
+  cell_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_cell_data_ = name;
 }
 
@@ -440,7 +560,7 @@ template<>
 void VTUWriter::add_cell_vector_field(const std::string &name,
                                  const vector<uint16_t> &data,
                                  const int &dimension) {
-  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  cell_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_cell_data_ = name;
 }
 
@@ -448,7 +568,7 @@ template<>
 void VTUWriter::add_cell_vector_field(const std::string &name,
                                  const vector<uint32_t> &data,
                                  const int &dimension) {
-  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  cell_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_cell_data_ = name;
 }
 
@@ -456,7 +576,7 @@ template<>
 void VTUWriter::add_cell_vector_field(const std::string &name,
                                  const vector<uint64_t> &data,
                                  const int &dimension) {
-  cell_data_.push_back(make_data_node(name, data, "Int", dimension));
+  cell_data_.push_back(make_data_node(name, data, "UInt", dimension));
   current_vector_cell_data_ = name;
 }
 
