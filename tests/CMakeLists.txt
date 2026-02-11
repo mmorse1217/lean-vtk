@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 11)
 
 # Explicitly list the test source code and headers. The Catch header-only unit
@@ -22,4 +22,4 @@ enable_testing()
 add_test(NAME TestLeanVTK  COMMAND TestLeanVTK)
 
 # Link our unit tests against the library we compiled
-target_link_libraries(TestLeanVTK LeanVTK)
+target_link_libraries(TestLeanVTK leanvtk)

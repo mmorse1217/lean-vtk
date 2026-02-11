@@ -8,7 +8,7 @@
 # file(GLOB ...) or not, you will need to re-run cmake, but with an explicit
 # file list, you know beforehand why your code isn't compiling. 
 set(LeanVTK_INC
-    lean_vtk.hpp
+    leanvtk.hpp
     )
 
 # Form the full path to the source files...
