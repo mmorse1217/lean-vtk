@@ -252,8 +252,16 @@ void VTUWriter::write_cell_data(std::ostream &os) {
   os << "</CellData>\n";
 }
 void VTUWriter::clear() {
+  for (auto node : point_data_)
+    delete node;
+  for (auto node : cell_data_)
+    delete node;
   point_data_.clear();
   cell_data_.clear();
+  current_scalar_point_data_.clear();
+  current_vector_point_data_.clear();
+  current_scalar_cell_data_.clear();
+  current_vector_cell_data_.clear();
 }
 
 template<>
