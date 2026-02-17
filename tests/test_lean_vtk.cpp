@@ -8,7 +8,9 @@
 using std::cout;
 using std::endl;
 using std::vector;
+using  leanvtk::VTKWriter;
 using  leanvtk::VTUWriter;
+using  leanvtk::VTPWriter;
 typedef double real_t;
 TEST_CASE("Single elements", "[single]"){
     vector<real_t> points;
@@ -720,7 +722,7 @@ TEST_CASE("Test point clouds", "[point]"){
         points = { 0., 1.};
         scalar_field = { 0.};
         vector_field = points;
-        filename = "single_point_2d.vtu";
+        filename = "single_point_2d.vtp";
 
     }
     SECTION("2D multiple points"){
@@ -733,7 +735,7 @@ TEST_CASE("Test point clouds", "[point]"){
         dim = 2;
         scalar_field = { 0., 1.,2.,3.};
         vector_field = points;
-        filename = "multi_point_2d.vtu";
+        filename = "multi_point_2d.vtp";
 
     }
    SECTION("3D single point"){
@@ -743,7 +745,7 @@ TEST_CASE("Test point clouds", "[point]"){
         dim = 3;
         scalar_field = { 0.};
         vector_field = points;
-        filename = "single_point_3d.vtu";
+        filename = "single_point_3d.vtp";
 
 
     }
@@ -757,15 +759,61 @@ TEST_CASE("Test point clouds", "[point]"){
         dim = 3;
         scalar_field = { 0., 1.,2.,3.};
         vector_field = points;
-        filename = "multi_point_3d.vtu";
+        filename = "multi_point_3d.vtp";
 
 
     }
-    VTUWriter writer;
+    VTPWriter writer;
 
     writer.add_scalar_field("scalar_field", scalar_field);
     writer.add_vector_field("vector_field", vector_field, dim);
+    writer.set_binary();
     writer.write_point_cloud(filename, dim, points);
+
+}
+
+TEST_CASE("Test lines", "[line]"){
+    vector<real_t> points;
+    vector<size_t> elements;
+    std::vector<unsigned char> axis_field;
+    size_t dim;
+    const size_t cell_size = 2;
+    std::string filename;
+    SECTION("2D lines"){
+        points = {
+            0., 0.,
+            1., 0.,
+            0., 1., 
+        };
+        elements = { 
+            0, 1,
+            0, 2
+        };
+        axis_field = {'x', 'y'};
+        dim = 2;
+        filename = "lines_2d.vtp";
+
+    }
+    SECTION("3D lines"){
+        points = {
+            0., 0., 0.,
+            1., 0., 0.,
+            0., 1., 0.,
+            0., 0., 1.,
+        };
+        elements = { 
+            0, 1,
+            0, 2,
+            0, 3
+        };
+        axis_field = {'x', 'y', 'z'};
+        dim = 3;
+        filename = "lines_3d.vtp";
+    }
+    VTPWriter writer;
+    writer.set_binary();
+    writer.add_cell_scalar_field("axis", axis_field);
+    writer.write_surface_mesh(filename, dim, cell_size, points, elements);
 }
 
 TEST_CASE("VTM", "[vtm]"){
@@ -819,5 +867,6 @@ TEST_CASE("VTM", "[vtm]"){
         vtus[1].write_volume_mesh("vtm_block1.vtu", 3, 8, points, elements);
     }
 
-    write_vtm("multiblock.vtm", vtus);
+    leanvtk::write_vtm("multiblock.vtm", {(VTKWriter*)&vtus[0],
+                                          (VTKWriter*)&vtus[1]});
 }
